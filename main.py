@@ -17,4 +17,5 @@ reg = Register(qubits)
 res = minimize(func, args=(G, reg), x0 =x0,method='Nelder-Mead', tol=1e-5,options = {'maxiter': 15}) #optimization method
 count_dict = quantum_loop(res.x, reg)
 plot_distribution(count_dict)
+print('cia')
 
