@@ -1,10 +1,10 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from utils.quantumloop import quantum_loop
+from pulser import Register
+from utils.quantumloop import quantum_loop, func
 from utils.graph import pos_to_graph
-from utils.cost import get_cost_colouring, get_cost_state, func
-from utils.plotdistriubution import plot_distribution
+from utils.plotdistribution import plot_distribution
 
 
 #Set parameters
@@ -14,8 +14,8 @@ G = pos_to_graph(pos)
 qubits = dict(enumerate(pos))
 reg = Register(qubits)
 #reg.draw()
-res = minimize(func, args=G, x0 =x0,method='Nelder-Mead', tol=1e-5,options = {'maxiter': 15}) #optimization method
-count_dict = quantum_loop(res.x)
+res = minimize(func, args=(G, reg), x0 =x0,method='Nelder-Mead', tol=1e-5,options = {'maxiter': 15}) #optimization method
+count_dict = quantum_loop(res.x, reg)
 plot_distribution(count_dict)
-print('ciao')
+print('cia')
 
