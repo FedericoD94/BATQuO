@@ -17,7 +17,7 @@ def pos_to_graph(pos, d = Chadoq2.rydberg_blockade_radius(1) ):
     g.add_edges(edges)
     return g
 
-def chair_graph(a = 10):
+def chair_graph(a = 10, draw = False):
     '''
     Cretes the chair graph
     
@@ -27,6 +27,8 @@ def chair_graph(a = 10):
     G = pos_to_graph(pos)
     qubits = dict(enumerate(pos))
     reg = Register(qubits)
+    if draw:
+        reg.draw()
     
     return reg, G
 

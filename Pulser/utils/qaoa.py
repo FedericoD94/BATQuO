@@ -20,7 +20,7 @@ def quantum_loop(param, r):
         seq.add(pulse_1, 'ch0')
         seq.add(pulse_2, 'ch0')
     seq.measure('ground-rydberg')
-    simul = Simulation(seq, sampling_rate=.001)
+    simul = Simulation(seq, sampling_rate=.01)
     results = simul.run()
     count_dict = results.sample_final_state(N_samples=1000) #sample from the state vector
     return count_dict
