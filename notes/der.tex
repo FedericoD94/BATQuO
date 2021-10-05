@@ -1,0 +1,56 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{parskip}
+
+\title{Bayesian Opt Acquisition Function}
+
+\begin{document}
+\maketitle
+
+\paragraph{Data}
+The relevant data when running bayesian optimization (BO) for minimization of an unknown function using a gaussian process (GP) prior is:
+\begin{itemize}
+\item $X = (x_1, \dots, x_n)^T$ are the observations. Each $x_j$ is a $D$-dimensional row vector.
+\item $Y = (y_1, \dots, y_n)$ are the values sampled at the observation points. Each $y_i$ is a scalar thus $Y$ is $(D, 1)$ vector. 
+\item $y_{best}$ is the current lowest value in $Y$.
+\item $x^*$ test point. $x^*$ is itself a $D$-dimensional row vector
+\end{itemize}
+
+\paragraph{Kernel}
+The Kernel is the core of the GP because it gives the correlation between data points. We usually assume an exponential kernel:
+$$ K(x_i, x_j) = \sigma^2 \exp^{-\frac{||x_i - x_j||_2^2}{2l^2}} $$
+where $\sigma$ and $l$ are hyperparameters that decide the intensity and the length of the correlation between variables $x_i$ and $|| \cdot ||_2$ is the 2-norm so that any $D$ dimensional data is given one number from the Kernel.
+
+In particular we have that:
+\begin{itemize}
+\item $K(X, x^*)$ kernel: $(n \times 1)$ matrix
+\item $\frac{\partial K(X, x^*)}{\partial x^*}$ kernel derivative: $(n \times D)$ matrix given by
+\begin{equation}
+\frac{\partial K(X, x^*)}{\partial x^*} = \frac{(X - x^*)}{\ell^2} * K(X, x^*)
+\end{equation}
+where $(X - x^*) = (x_1 - x^*, \dots, x_n - x^*)^T$ and $*$ is the element wise product in python.
+\end{itemize}
+
+\paragraph{Acquisition Function}
+The acq function is a scalar function evaluable at a test point $x^*$ that tells us how likely that point is to be an extremal point (minimum or mazimum depending on the optimization problem). So to find its form we create a \textit{utility function} that tells how 'good' is a test point $x^*$ in our optimization routine (how much lower it is from the current lowest value), this is intuitively given by: $UF = \min (f(x^*) - y_{best}, 0)$. We conveniently reparametrize it:
+$$UF = \min \bigg(\frac{f(x^*) - \mu(x^*)}{\sigma(x^*)} - \frac{y_{best} - \mu(x^*)}{\sigma(x^*)} , 0\bigg)\sigma(x^*)$$
+A typical acq function is the Expected Improvement (EI) which is the expectation value of $UF$, namely: $EI = \mathbb{E}[UF]$. Doing the calculation we obtain:
+\begin{itemize}
+\item acquisition function
+$$ a(z, x^*) = -\sigma(x^*) \ \left[ \phi(z)  + z \Phi(z)\right]$$
+where $$z=\frac{y_\text{best} - \mu(x^*)}{\sigma(x^*)}$$
+with $$ \mu(x^*) = K(X, x^*) K(X, X)^{-1} Y $$, $$ \sigma (x^*) = K(x^*, x^*) - K(x^*, X)K(X, X)^{-1}K(X, x^*) $$
+and $\phi(z)$ is a Gaussian centered in 0 and variance 1 while $\Phi(z)$ is its cumulative function.
+\item acquisition function derivative
+$$\frac{d{a(z, x^*)}}{d x^*} = -\Phi(z) \frac{d z}{d x^*} - \left[\phi(z) +z \Phi(x)\right] \frac{d{\sigma}}{d x^*}$$
+with
+$$ \frac{d z}{d x^*} = -\frac{1}{\sigma} \frac{d \mu}{d x^*} - \frac{y_\text{best} - \mu}{\sigma^2} \frac{d{\sigma}}{d x^*}$$
+\end{itemize}
+\end{document}  
