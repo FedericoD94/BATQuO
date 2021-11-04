@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from utils.qaoa_qiskit import *
-from gaussian_process import *
+from utils.gaussian_process import *
 import json
 import time
 
@@ -93,6 +93,7 @@ std_energies.append(std_energies[where])
 iter = range(Nwarmup + Nbayes)
 training_info = np.column_stack(([i for i in iter] + [where], X_train, y_train, fidelities, delta_Es, corr_lengths, average_distance_vectors, std_energies))
 
+np.savetxt('p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes), training_info)
 print('Best point: ' , where,  best_x, best_y, fidelities[where], delta_Es[where], corr_lengths[where])
 
 counts = qaoa.final_sampled_state(best_x)

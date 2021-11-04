@@ -804,12 +804,23 @@ class DifferentialEvolutionSolver:
         """
         Return True if the solver has converged.
         """
+        distance_vectors_matrix = np.array([[np.linalg.norm(p - j) for p in self.population] for j in self.population])
+        distance_vectors = np.triu(distance_vectors_matrix)
+
+        average_norm_distance = 2*np.sum(distance_vectors)/(len(distance_vectors)*(len(distance_vectors)-1))
+
+
         if np.any(np.isinf(self.population_energies)):
             return False
 
-        return (np.std(self.population_energies) <=
+        test_1 = (np.std(self.population_energies) <=
                 self.atol +
                 self.tol * np.abs(np.mean(self.population_energies)))
+        test_2 = average_norm_distance <= self.tol/10
+        
+        return (test_1 and test_2)
+                
+        
 
     def solve(self):
         """
