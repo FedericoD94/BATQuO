@@ -13,12 +13,13 @@ from itertools import product
 from sklearn.utils.optimize import _check_optimize_result
 from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
+import random
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-	def __init__(self, *args, param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
+	def __init__(self, *args, seed = 0, param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._max_iter = max_iter
 		self._gtol = gtol
@@ -27,6 +28,10 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		self.Y = []
 		self.x_best = 0
 		self.y_best = 2
+		self.seed = seed
+		if self.seed:
+		    random.seed(self.seed)
+		    np.random.seed(self.seed)
 
 	def _constrained_optimization(self,
 								  obj_func,
@@ -212,6 +217,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 											callback = callbackF,
 											popsize = 15,
 											tol = .001,
+											seed = self.seed,
 											args = (self, -1)) as diff_evol:
 				results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
 			next_point = results.x

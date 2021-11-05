@@ -512,7 +512,6 @@ class DifferentialEvolutionSolver:
                  maxfun=np.inf, callback=None, disp=False, polish=True,
                  init='latinhypercube', atol=0, updating='immediate',
                  workers=1, constraints=(), x0=None):
-
         if strategy in self._binomial:
             self.mutation_func = getattr(self, self._binomial[strategy])
         elif strategy in self._exponential:
@@ -816,8 +815,9 @@ class DifferentialEvolutionSolver:
         test_1 = (np.std(self.population_energies) <=
                 self.atol +
                 self.tol * np.abs(np.mean(self.population_energies)))
-        test_2 = average_norm_distance <= self.tol/10
+        test_2 = average_norm_distance <= self.tol*100
         
+        #print(,average_norm_distance, self.tol)
         return (test_1 and test_2)
                 
         

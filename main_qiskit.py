@@ -12,7 +12,7 @@ np.random.seed(seed)
 random.seed(seed)
 
 ### PARAMETERS
-depth = 1
+depth = 7
 Nwarmup = 10
 Nbayes = 50
 backend = 'QISKIT'
@@ -42,6 +42,7 @@ gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
 #kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 
 kernel =  ConstantKernel(1)* Matern(length_scale=0.11, length_scale_bounds=(1e-01, 100.0), nu=1.5)
 gp = MyGaussianProcessRegressor(kernel=kernel, 
+                                seed = seed,
                                 param_range = param_range,
                                 n_restarts_optimizer=20, 
                                 alpha=1e-2,
@@ -66,8 +67,6 @@ for i in range(Nbayes):
     y_next_point = qaoa.expected_energy(next_point)
     end_time = time.time()
     print('Time gp: {}, time qaoa: {}'.format(mid_time - start_time, end_time - mid_time))
-    #gp.kernel_.set_params(k2__length_scale_bounds = (0.1 + i/100 , 1000))
-
     fidelity = qaoa.fidelity_gs(next_point)
     delta_E = abs(y_next_point - gs_energy)
     corr_length = gp.kernel_.get_params()['k2__length_scale']
@@ -93,11 +92,11 @@ std_energies.append(std_energies[where])
 iter = range(Nwarmup + Nbayes)
 training_info = np.column_stack(([i for i in iter] + [where], X_train, y_train, fidelities, delta_Es, corr_lengths, average_distance_vectors, std_energies))
 
-np.savetxt('p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes), training_info)
+np.savetxt('p={}_punti={}_warmup={}_train={}_2.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes), training_info)
 print('Best point: ' , where,  best_x, best_y, fidelities[where], delta_Es[where], corr_lengths[where])
 
 counts = qaoa.final_sampled_state(best_x)
 qaoa.plot_final_state(counts)
-plt.savefig('sampled_state_p{}.png'.format(depth))
+#plt.savefig('sampled_state_p{}.png'.format(depth))
 end_time = time.time()
 print('time: ',  end_time - start_time)

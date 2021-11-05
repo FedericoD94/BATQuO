@@ -389,10 +389,7 @@ class qaoa_qiskit(object):
             H -= penalty/4 * sz_list[edge[1]]
         energies, eigenstates = H.eigenstates(sort = 'low')
         gs_en = energies[0]
-        print([np.argmax(eigenstates[i]) for i in range(len(eigenstates))])
-        print(energies)
         if energies[0] ==  energies[1]:
-            print('DEGENERATE GROUND STATE')
             deg = True
             gs_state = eigenstates[:2]
             gs_state = 1/np.sqrt(2) * np.real(gs_state[0].full() + gs_state[1].full()).reshape(2**self.N)
