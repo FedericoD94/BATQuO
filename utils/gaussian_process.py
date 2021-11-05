@@ -217,13 +217,14 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 											callback = callbackF,
 											popsize = 15,
 											tol = .001,
+											dist_tol = 0.01,
 											seed = self.seed,
 											args = (self, -1)) as diff_evol:
 				results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
 			next_point = results.x
 			success = results.success
 		next_point = self.scale_up(next_point)
-		return next_point, results, average_norm_distance_vectors, std_population_energy, conv_flag
+		return next_point, results.nit, average_norm_distance_vectors, std_population_energy
 
 
 	def plot_landscape(self, show = True, save = False):

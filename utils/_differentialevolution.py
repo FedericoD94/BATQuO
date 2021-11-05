@@ -21,7 +21,7 @@ _MACHEPS = np.finfo(np.float64).eps
 
 def differential_evolution(func, bounds, args=(), strategy='best1bin',
                            maxiter=1000, popsize=15, tol=0.01,
-                           mutation=(0.5, 1), recombination=0.7, seed=None,
+                           mutation=(0.5, 1), recombination=0.7, dist_tol = 0.01, seed=None,
                            callback=None, disp=False, polish=True,
                            init='latinhypercube', atol=0, updating='immediate',
                            workers=1, constraints=(), x0=None):
@@ -322,6 +322,7 @@ def differential_evolution(func, bounds, args=(), strategy='best1bin',
                                      seed=seed, polish=polish,
                                      callback=callback,
                                      disp=disp, init=init, atol=atol,
+                                     dist_tol = dist_tol,
                                      updating=updating,
                                      workers=workers,
                                      constraints=constraints,
@@ -508,7 +509,7 @@ class DifferentialEvolutionSolver:
 
     def __init__(self, func, bounds, args=(),
                  strategy='best1bin', maxiter=1000, popsize=15,
-                 tol=0.01, mutation=(0.5, 1), recombination=0.7, seed=None,
+                 tol=0.01, dist_tol = 0.01, mutation=(0.5, 1), recombination=0.7, seed=None,
                  maxfun=np.inf, callback=None, disp=False, polish=True,
                  init='latinhypercube', atol=0, updating='immediate',
                  workers=1, constraints=(), x0=None):
@@ -519,7 +520,7 @@ class DifferentialEvolutionSolver:
         else:
             raise ValueError("Please select a valid mutation strategy")
         self.strategy = strategy
-
+        self.dist_tol = dist_tol
         self.callback = callback
         self.polish = polish
 
@@ -815,9 +816,8 @@ class DifferentialEvolutionSolver:
         test_1 = (np.std(self.population_energies) <=
                 self.atol +
                 self.tol * np.abs(np.mean(self.population_energies)))
-        test_2 = average_norm_distance <= self.tol*100
+        test_2 = average_norm_distance <= self.dist_tol
         
-        #print(,average_norm_distance, self.tol)
         return (test_1 and test_2)
                 
         
@@ -950,13 +950,15 @@ class DifferentialEvolutionSolver:
                 DE_result.message = ("The solution does not satisfy the"
                                     " constraints, MAXCV = " % DE_result.maxcv)
 
-        distance_vectors = np.array([p - j for p in self.population for j in self.population])
-        norm_distance_vectors = [np.linalg.norm(vec) for vec in distance_vectors]
-        average_norm_distance_vectors = np.average(norm_distance_vectors)
+        distance_vectors_matrix = np.array([[np.linalg.norm(p - j) for p in self.population] for j in self.population])
+        distance_vectors = np.triu(distance_vectors_matrix)
+
+        average_norm_distance = 2*np.sum(distance_vectors)/(len(distance_vectors)*(len(distance_vectors)-1))
+
         std_population_energy = self.convergence
         conv_flag = self.atol + self.tol * np.abs(np.mean(self.population_energies))
             
-        return DE_result, average_norm_distance_vectors, std_population_energy, conv_flag
+        return DE_result, average_norm_distance, std_population_energy, conv_flag
 
     def _calculate_population_energies(self, population):
         """
