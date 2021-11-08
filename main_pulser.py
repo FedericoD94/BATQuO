@@ -18,7 +18,7 @@ np.set_printoptions(precision=4)
 
 start_time = time.time()
 ### TRAIN PARAMETERS
-depth = 8
+depth = 4
 Nwarmup = 10
 Nbayes = 50
 backend = 'PULSER'

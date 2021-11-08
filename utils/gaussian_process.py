@@ -41,6 +41,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		Do not change the elif option
 		'''
 		
+		def obj_func_no_grad(x):
+				return 	obj_func(x)[0]
+				
 		if self.optimizer == "fmin_l_bfgs_b":
 			opt_res = minimize(obj_func,
 							   initial_theta,
@@ -52,16 +55,19 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 							   )
 			_check_optimize_result("lbfgs", opt_res)
 			theta_opt, func_min = opt_res.x, opt_res.fun
+
+
 		elif self.optimizer == 'differential_evolution':
-			with DifferentialEvolutionSolver(obj_func,
+			diff_evol = DifferentialEvolutionSolver(obj_func_no_grad,
 											x0 = initial_theta,
 											bounds = bounds,
 											popsize = 15,
 											tol = .001,
 											dist_tol = 0.01,
-											seed = self.seed) as diff_evol:
-				results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
+											seed = self.seed)# as diff_evol:
+			results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
 			theta_opt, func_min = results.x, results.fun
+
 
 		elif callable(self.optimizer):
 			theta_opt, func_min = self.optimizer(obj_func,

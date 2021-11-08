@@ -12,9 +12,9 @@ np.random.seed(seed)
 random.seed(seed)
 
 ### PARAMETERS
-depth = 1
-Nwarmup =3
-Nbayes = 1
+depth = 2
+Nwarmup =10
+Nbayes = 90
 backend = 'QISKIT'
 method = 'DIFF-EVOL'
 param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
@@ -38,7 +38,8 @@ gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
 #kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 
 kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(1e-01, 100.0), nu=1.5)
 gp = MyGaussianProcessRegressor(kernel=kernel, 
-                                optimizer = 'L-BFGS-B', #L-BFGS-B or differential_evolution
+                                #optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
+                                optimizer = 'differential_evolution', #fmin_l_bfgs_bor                                 
                                 seed = seed,
                                 param_range = param_range,
                                 n_restarts_optimizer=20, 
