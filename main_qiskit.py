@@ -58,31 +58,31 @@ data = [[i] + x + [y_train[i],
 
 ### BAYESIAN OPTIMIZATION
 init_pos = [0.2, 0.2]*depth
-
+print('Training ...')
 for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
     bayes_time = time.time() - start_time
     y_next_point = qaoa.expected_energy(next_point)
-    qaoa_time = time.time() - bayes_time
+    qaoa_time = time.time() - start_time - bayes_time
     fidelity = qaoa.fidelity_gs(next_point)
     corr_length = gp.kernel_.get_params()['k2__length_scale']
     constant_kernel = gp.kernel_.get_params()['k1__constant_value']
     gp.fit(next_point, y_next_point)
-    kernel_time = time.time() - qaoa_time
+    kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
     
     new_data = [i+Nwarmup] + next_point + [y_next_point, fidelity, corr_length, constant_kernel, 
-                                    std_pop_energy, avg_sqr_distances, n_it, kernel_time, 
-                                    bayes_time, qaoa_time, step_time]                    
+                                    std_pop_energy, avg_sqr_distances, n_it, 
+                                    bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
-    print(data)
-    np.savetxt(file_name, data)
+    #print((i+1),' / ',Nbayes)
+    np.savetxt(file_name, data, fmt = '%.d ' + (len(new_data) - 1)*'%.4f ')
     
 best_x, best_y, where = gp.get_best_point()
 
 data.append(data[where])
 
-np.savetxt(file_name, np.array(data))
+np.savetxt(file_name, np.array(data), fmt = '%.d ' + (len(new_data) - 1)*'%.4f')
 print('Best point: ' , data[where])
 print('time: ',  time.time() - global_time)
