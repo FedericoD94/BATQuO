@@ -19,8 +19,8 @@ import random
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-	def __init__(self, *args, seed = 0, param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, *args, seed = 0, optimizer = "fmin_l_bfgs_b",param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
+		super().__init__(optimizer = optimizer, *args, **kwargs)
 		self._max_iter = max_iter
 		self._gtol = gtol
 		self.param_range = param_range
@@ -37,6 +37,10 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 								  obj_func,
 								  initial_theta,
 								  bounds):
+		'''
+		Do not change the elif option
+		'''
+		
 		if self.optimizer == "fmin_l_bfgs_b":
 			opt_res = minimize(obj_func,
 							   initial_theta,
@@ -48,6 +52,17 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 							   )
 			_check_optimize_result("lbfgs", opt_res)
 			theta_opt, func_min = opt_res.x, opt_res.fun
+		elif self.optimizer == 'differential_evolution':
+			with DifferentialEvolutionSolver(obj_func,
+											x0 = initial_theta,
+											bounds = bounds,
+											popsize = 15,
+											tol = .001,
+											dist_tol = 0.01,
+											seed = self.seed) as diff_evol:
+				results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
+			theta_opt, func_min = results.x, results.fun
+
 		elif callable(self.optimizer):
 			theta_opt, func_min = self.optimizer(obj_func,
 												 initial_theta,
