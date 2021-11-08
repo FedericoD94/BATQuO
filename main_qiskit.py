@@ -15,15 +15,15 @@ random.seed(seed)
 depth = 2
 Nwarmup =10
 Nbayes = 90
-backend = 'QISKIT'
 method = 'DIFF-EVOL'
 param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
 
 file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 data = []
 global_time = time.time()
-results_structure = ['iter', 'point', 'energy', 'fidelity', 'corr_length', 'const kernel',
-                    'std energies', 'average distances', 'nit', 'time opt kernel', 'time opt bayes', 'time qaoa', 'time step']
+results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
+                    'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
+
 
 ### CREATE GRAPH 
 pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
@@ -33,6 +33,7 @@ G = nx.Graph()
 G.add_edges_from(pos)
 qaoa = qaoa_qiskit(G)
 gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
+
 
 ### CREATE GP AND FIT TRAINING DATA
 #kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 

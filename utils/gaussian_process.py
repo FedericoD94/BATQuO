@@ -8,7 +8,7 @@ from .grad_descent import *
 
 # SKLEARN
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF,WhiteKernel, Matern, ConstantKernel
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern, ConstantKernel
 from itertools import product
 from sklearn.utils.optimize import _check_optimize_result
 from scipy.stats import norm
@@ -27,7 +27,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		self.X = []
 		self.Y = []
 		self.x_best = 0
-		self.y_best = 2
+		self.y_best = np.inf
 		self.seed = seed
 		if self.seed:
 		    random.seed(self.seed)

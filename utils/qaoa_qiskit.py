@@ -294,7 +294,6 @@ class qaoa_qiskit(object):
         plt.xticks(rotation='vertical')
         plt.bar(sorted_freq_dict.keys(), sorted_freq_dict.values(), width=0.5, color = color_dict.values())
 
-
     def spectrum_vs_penalty(self, penalty_min=-2,
                             penalty_max=3,
                             penalty_step=0.5,
@@ -399,6 +398,8 @@ class qaoa_qiskit(object):
             gs_state = gs_state.full()
 
         self.gs_state = gs_state
+        self.gs_en = gs_en
+        self.deg = deg
 
         return gs_en, gs_state, deg
 

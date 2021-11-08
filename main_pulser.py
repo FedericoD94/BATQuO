@@ -2,47 +2,37 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from pulser import Register
-from pulser.devices import Chadoq2
-
-from scipy.optimize import minimize
 from utils.qaoa_pulser import *
-from HMC import *
-from gaussian_process import *
+from utils.gaussian_process import *
 import time
 
-seed = 22
+seed = 23
 np.random.seed(seed)
 random.seed(seed)
 np.set_printoptions(precision=4)
 
-start_time = time.time()
 ### TRAIN PARAMETERS
-depth = 4
+depth = 6
 Nwarmup = 10
 Nbayes = 50
-backend = 'PULSER'
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
 
-fidelities = []
-delta_Es  = []
-corr_lengths = []
-average_distance_vectors = []
-std_energies = []
+file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+
+data = []
+global_time = time.time()
+results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
+                    'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
 
 ### CREATE GRAPH AND REGISTER 
-pos = np.array([[0., 0.],
-                [-4, -7],
-                [4, -7],
-                [8, 6],
-                [-8, 6]]
+pos = np.array(
+				[[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]]
                )
-G, distances = pos_to_graph(pos)
+               
+qaoa = qaoa_pulser(pos)
+gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-qubits = dict(enumerate(pos))
-reg = Register(qubits)
-    
 ### INITIAL RANDOM POINTS
 X_train = []   #data
 y_train = []   #label
@@ -50,60 +40,52 @@ y_train = []   #label
 ### CREATE GP AND FIT TRAINING DATA
 kernel =  ConstantKernel(1)* Matern(length_scale=0.11, length_scale_bounds=(1e-01, 100.0), nu=1.5)
 gp = MyGaussianProcessRegressor(kernel=kernel,
-                                n_restarts_optimizer=20,
+                                n_restarts_optimizer=10,
                                 param_range = param_range,
                                 alpha=1e-2,
                                 normalize_y=True,
                                 max_iter=50000)
 
-X_train, y_train = generate_random_points(Nwarmup, G, depth, param_range, reg)
+X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
 gp.fit(X_train, y_train)
 
-sample_points = []
-energies = []
-fidelities = [0]*Nwarmup
-delta_Es = [0]*Nwarmup
-average_distance_vectors = [0]*Nwarmup
-std_energies = [0]*Nwarmup
-corr_lengths = [gp.kernel_.get_params()['k2__length_scale']]*Nwarmup
-indexes = ['01011', '00111']
-print(' ITER   |   NEXT POINT  |  ENERGY ')
-init_pos = [0.2, 0.2]*depth
-for i in range(Nbayes):
-    next_point, results, average_norm_distance_vectors, std_energy, conv_flag = gp.bayesian_opt_step(init_pos, method)
-    
-    corr_length = gp.kernel_.get_params()['k2__length_scale']
-    next_point = [int(x) for x in next_point]
-    X_train.append(next_point)
-    y_next_point = apply_qaoa(next_point, reg, G)
-    y_train.append(y_next_point)
-    C, _= quantum_loop(next_point, r=reg)
-    fidelity = (C[indexes[0]] + C[indexes[1]])/1000
-    fidelities.append(fidelity)
-    print(i, next_point, y_next_point, fidelity)
-    gp.fit(next_point, y_next_point)
-    sample_points.append(next_point)
-    corr_lengths.append(corr_length)
-    std_energies.append(std_energy)
-    average_distance_vectors.append(average_distance_vectors)
-    energies.append(y_next_point)
-    delta_Es.append(abs(-3 -y_next_point ))
-    
-    
-best_x, best_y, where = gp.get_best_point()
-X_train.append(best_x)
-y_train.append(best_y)
-fidelities.append(fidelities[where])
-delta_Es.append(delta_Es[where])
-corr_lengths.append(corr_lengths[where])
-average_distance_vectors.append(average_distance_vectors[where])
-std_energies.append(std_energies[where])
-iter = range(Nwarmup + Nbayes)
-training_info = np.column_stack(([i for i in iter] + [where], X_train, y_train, fidelities, delta_Es, corr_lengths, std_energies))
-end_time = time.time()
-np.savetxt('p={}_training_time_{}.dat'.format(depth, end_time - start_time), training_info)
-print('Best point: ' , where,  best_x, best_y, fidelities[where], delta_Es[where])
 
-params = best_x
-C, _= quantum_loop(params, r=reg)
-plot_distribution(C)
+data = [[i] + x + [y_train[i], 
+                    qaoa.fidelity_gs_exact(x), 
+                    qaoa.fidelity_gs_sampled(x),
+                    gp.kernel_.get_params()['k2__length_scale'],
+                    gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
+                    ] for i, x in enumerate(X_train)]
+                    
+init_pos = [0.2, 0.2]*depth
+print('Training ...')
+
+for i in range(Nbayes):
+    start_time = time.time()
+    next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
+    bayes_time = time.time() - start_time
+    y_next_point = qaoa.expected_energy(next_point)
+    qaoa_time = time.time() - start_time - bayes_time
+    fid_exact = qaoa.fidelity_gs_exact(next_point)
+    fid_sampled = qaoa.fidelity_gs_sampled(next_point)
+
+    corr_length = gp.kernel_.get_params()['k2__length_scale']
+    constant_kernel = gp.kernel_.get_params()['k1__constant_value']
+    gp.fit(next_point, y_next_point)
+    kernel_time = time.time() - start_time - qaoa_time - bayes_time
+    step_time = time.time() - start_time
+    
+    new_data = [i+Nwarmup] + next_point + [y_next_point, fid_exact, fid_sampled, corr_length, constant_kernel, 
+                                    std_pop_energy, avg_sqr_distances, n_it, 
+                                    bayes_time, qaoa_time, kernel_time, step_time]                    
+    data.append(new_data)
+    #print((i+1),' / ',Nbayes)
+    format = '%.d ' + (len(new_data) - 1)*'%.4f '
+    np.savetxt(file_name, data, fmt = format)
+     
+best_x, best_y, where = gp.get_best_point()
+data.append(data[where])
+
+np.savetxt(file_name, np.array(data), fmt = format)
+print('Best point: ' , data[where])
+print('time: ',  time.time() - global_time)
