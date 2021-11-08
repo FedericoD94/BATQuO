@@ -77,12 +77,13 @@ for i in range(Nbayes):
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
     #print((i+1),' / ',Nbayes)
-    np.savetxt(file_name, data, fmt = '%.d ' + (len(new_data) - 1)*'%.4f ')
+    format = '%.d ' + (len(new_data) - 1)*'%.4f '
+    np.savetxt(file_name, data, fmt = format)
     
 best_x, best_y, where = gp.get_best_point()
 
 data.append(data[where])
 
-np.savetxt(file_name, np.array(data), fmt = '%.d ' + (len(new_data) - 1)*'%.4f')
+np.savetxt(file_name, np.array(data), fmt = format)
 print('Best point: ' , data[where])
 print('time: ',  time.time() - global_time)
