@@ -14,7 +14,8 @@ from qutip import *
 
 class qaoa_pulser(object):
 
-	def __init__(self, pos):
+	def __init__(self, pos, noise):
+		self.noisy = noise
 		self.omega = 1.
 		self.delta = 1.
 		self.U = 10
@@ -61,9 +62,12 @@ class qaoa_pulser(object):
 	
 		return simul
 	
-	def quantum_loop(self, param):
-		simul = self.create_quantum_circuit(param)
-		results = simul.run()
+	def quantum_loop(self, param, noise):
+		sim = self.create_quantum_circuit(param)
+		if noisy ==False:
+    			cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
+    			sim.add_config(cfg)
+		results = sim.run()
 		count_dict = results.sample_final_state(N_samples=1000) #sample from the state vector
 		return count_dict, results.states
 
