@@ -10,6 +10,8 @@ seed = 23
 np.random.seed(seed)
 random.seed(seed)
 np.set_printoptions(precision=4)
+### Let's ddecide if we want noisy
+noisy=False 
 
 ### TRAIN PARAMETERS
 depth = 6
@@ -30,7 +32,7 @@ pos = np.array(
 				[[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]]
                )
                
-qaoa = qaoa_pulser(pos)
+qaoa = qaoa_pulser(pos,noisy)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
 ### INITIAL RANDOM POINTS
