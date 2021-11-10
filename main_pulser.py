@@ -6,14 +6,11 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 
-seed = 23
-np.random.seed(seed)
-random.seed(seed)
-np.set_printoptions(precision=4)
+seed = 22
 
 ### TRAIN PARAMETERS
-depth = 6
-Nwarmup = 10
+depth = 1
+Nwarmup = 3
 Nbayes = 50
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
@@ -59,7 +56,7 @@ data = [[i] + x + [y_train[i],
                     
 init_pos = [0.2, 0.2]*depth
 print('Training ...')
-
+print(X_train)
 for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
@@ -79,7 +76,8 @@ for i in range(Nbayes):
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
-    #print((i+1),' / ',Nbayes)
+    print((i+1),' / ',Nbayes)
+    print(new_data)
     format = '%.d ' + (len(new_data) - 1)*'%.4f '
     np.savetxt(file_name, data, fmt = format)
      

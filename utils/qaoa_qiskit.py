@@ -8,6 +8,7 @@ import numpy as np
 # QUANTUM
 from qiskit import Aer, QuantumCircuit, execute
 from qutip import *
+from  utils.default_params import *
 
 # VIZ
 from matplotlib import pyplot as plt
@@ -158,7 +159,9 @@ class qaoa_qiskit(object):
                     shots=DEFAULT_PARAMS["shots"] ):
 
         backend = Aer.get_backend(backend_name)
-        simulate = execute(qc, backend=backend, shots=shots)
+        
+        #The two seeds are necessary for reproducibility!  
+        simulate = execute(qc, backend=backend, shots=shots, seed_transpiler = DEFAULT_PARAMS["seed"], seed_simulator = DEFAULT_PARAMS["seed"])
         results = simulate.result()
 
         return results
@@ -294,6 +297,7 @@ class qaoa_qiskit(object):
         plt.xticks(rotation='vertical')
         plt.bar(sorted_freq_dict.keys(), sorted_freq_dict.values(), width=0.5, color = color_dict.values())
 
+
     def spectrum_vs_penalty(self, penalty_min=-2,
                             penalty_max=3,
                             penalty_step=0.5,
@@ -327,22 +331,13 @@ class qaoa_qiskit(object):
             plt.show()
 
         return degeneracies_df, configuration_energies
-    '''
-    def generate_random_points(self, N_points, depth, extrem_params):
-        X = []
-        Y = []
-        for i in range(N_points):
-            x = [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(depth*2)]
-            X.append(x)
-            y = self.expected_energy(x)
-            Y.append(y)
-
-        return X, Y
-    '''
 
     def generate_random_points(self, N_points, depth, extrem_params, fixed_params=None):
         X = []
         Y = []
+        np.random.seed(DEFAULT_PARAMS['seed'])
+        random.seed(DEFAULT_PARAMS['seed'])
+        
         for i in range(N_points):
             if fixed_params is None:
                 x = [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(depth*2)]

@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from ._differentialevolution import DifferentialEvolutionSolver
 from .HMC import *
 from .grad_descent import *
-
+from  utils.default_params import *
 # SKLEARN
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern, ConstantKernel
@@ -19,7 +19,7 @@ import random
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-	def __init__(self, *args, seed = 0, optimizer = "fmin_l_bfgs_b",param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
+	def __init__(self, *args, optimizer = "fmin_l_bfgs_b",param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
 		super().__init__(optimizer = optimizer, *args, **kwargs)
 		self._max_iter = max_iter
 		self._gtol = gtol
@@ -28,10 +28,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		self.Y = []
 		self.x_best = 0
 		self.y_best = np.inf
-		self.seed = seed
-		if self.seed:
-		    random.seed(self.seed)
-		    np.random.seed(self.seed)
+		self.seed = DEFAULT_PARAMS["seed"]
 
 	def _constrained_optimization(self,
 								  obj_func,
@@ -236,6 +233,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 			with DifferentialEvolutionSolver(self.acq_func,
 											bounds = [(0,1), (0,1)]*depth,
 											callback = callbackF,
+											maxiter = 100,
 											popsize = 15,
 											tol = .001,
 											dist_tol = 0.01,

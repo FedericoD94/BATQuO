@@ -6,10 +6,8 @@ from utils.gaussian_process import *
 import json
 import time
 
+'RUNNA IL MAIN AUMENTANDO I P UTILIZZANDO COME STARTING POINTS QUELLI DEL PUNTO PRECEDENTE'
 np.set_printoptions(precision = 4, suppress = True)
-seed = 23
-np.random.seed(seed)
-random.seed(seed)
 
 ### PARAMETERS
 depths = np.arange(1, 10, 1)
@@ -42,8 +40,7 @@ for depth in depths:
 	kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(0.01, 100), nu=1.5)
 	gp = MyGaussianProcessRegressor(kernel=kernel, 
 									optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
-									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor                                 
-									seed = seed,
+									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor     
 									param_range = param_range,
 									n_restarts_optimizer=10, 
 									alpha=1e-2,

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from pulser import Pulse, Sequence, Register, Simulation
 from pulser.devices import Chadoq2
 from itertools import product
+from utils.default_params import *
+import random
 
 from scipy.optimize import minimize
 from qutip import *
@@ -130,6 +132,10 @@ class qaoa_pulser(object):
 	def generate_random_points(self, Npoints, depth, extrem_params):
 		X = []
 		Y = []
+		
+		np.random.seed(DEFAULT_PARAMS['seed'])
+		random.seed(DEFAULT_PARAMS['seed'])
+        
 		for i in range(Npoints):
 			x = [np.random.randint(extrem_params[0],extrem_params[1]),
 					np.random.randint(extrem_params[0],extrem_params[1])]*depth
@@ -142,25 +148,20 @@ class qaoa_pulser(object):
 		return X, Y
 
 	def fidelity_gs_sampled(self, x):
-		nodes = self.G.nodes
-		if self.gs_en is None:
-			self.calculate_physical_gs()
-			gs_state = np.array(gs_state)
+		'''
+		Fidelity sampled means how many times the solution(s) is measured
+		'''
+		C = self.get_sampled_state(x)
 		
-		C, _ = self.quantum_loop(x)
-		gs_dict = {}
+		indexes = ['01011', '00111']  # MIS indexes
 	
-		prod_list = product(['0','1'], range(len(nodes)))
-		for i, bits in enumerate(prod_list):
-			gs_dict[bits] = self.gs_state[i]
-		
-		prod = 0
-		for i, bits in prod_list:
-			prod += np.sqrt(C[bits])*gs_dict[bits]
-	
-		return prod / sum(C.values())
+		return (C[indexes[0]]+C[indexes[1]])
 		
 	def fidelity_gs_exact(self, param):
+		'''
+		Return the fidelity of the exact qaoa state (obtained with qutip) and the 
+		exact groundstate calculated with the physical hamiltonian of pulser
+		'''
 		C, evolution_states = self.quantum_loop(param)
 		if self.gs_state == None:
 			self.calculate_physical_gs()

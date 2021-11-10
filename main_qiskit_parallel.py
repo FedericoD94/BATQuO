@@ -7,10 +7,9 @@ import json
 import time
 import sys
 
+'RUNNA IL MAIN VARIANDO NUMERO DI WARMUP POINTS E NUMERO TOTALE DI POINT DA RUNNARE SU CLUSTER IN PARALLELO'
+
 np.set_printoptions(precision = 4, suppress = True)
-seed = 23
-np.random.seed(seed)
-random.seed(seed)
 
 percentages_warmup = [.1, .2, 3., .4, .5]
 
@@ -44,8 +43,7 @@ for percentage_warmup in percentages_warmup:
 	kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(1e-01, 100.0), nu=1.5)
 	gp = MyGaussianProcessRegressor(kernel=kernel, 
 									optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
-									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor                                 
-									seed = seed,
+									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor  
 									param_range = param_range,
 									n_restarts_optimizer=20, 
 									alpha=1e-2,

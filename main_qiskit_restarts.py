@@ -9,12 +9,9 @@ import time
 'Qiskit runnato N volte ripartendo da punti dversi ogni volta'
 
 np.set_printoptions(precision = 4, suppress = True)
-seed = 23
-np.random.seed(seed)
-random.seed(seed)
 
 N = 20
-for i in N:
+for i in range(N):
 	### PARAMETERS
 	depth = 4
 	Nwarmup =10
@@ -46,7 +43,6 @@ for i in N:
 	gp = MyGaussianProcessRegressor(kernel=kernel, 
 									optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
 									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor                                 
-									seed = seed,
 									param_range = param_range,
 									n_restarts_optimizer=10, 
 									alpha=1e-2,
