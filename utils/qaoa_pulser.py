@@ -6,16 +6,17 @@ import matplotlib.pyplot as plt
 
 from pulser import Pulse, Sequence, Register, Simulation
 from pulser.devices import Chadoq2
+from pulser.simulation import SimConfig
 from itertools import product
+
 
 from scipy.optimize import minimize
 from qutip import *
 
-
+noise=False
 class qaoa_pulser(object):
 
 	def __init__(self, pos, noise):
-		self.noisy = noise
 		self.omega = 1.
 		self.delta = 1.
 		self.U = 10
@@ -62,9 +63,9 @@ class qaoa_pulser(object):
 	
 		return simul
 	
-	def quantum_loop(self, param, noise):
+	def quantum_loop(self, param):
 		sim = self.create_quantum_circuit(param)
-		if noisy ==False:
+		if noise ==True:
     			cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
     			sim.add_config(cfg)
 		results = sim.run()
