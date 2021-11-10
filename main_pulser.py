@@ -10,7 +10,7 @@ seed = 23
 np.random.seed(seed)
 random.seed(seed)
 np.set_printoptions(precision=4)
-### Let's ddecide if we want noisy
+### Let's decide if we want noise
 noise=False 
 
 ### TRAIN PARAMETERS
