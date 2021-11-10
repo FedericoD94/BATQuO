@@ -12,6 +12,8 @@ np.set_printoptions(precision = 4, suppress = True)
 
 N = 20
 for i in range(N):
+	np.random.seed(i)
+	random.seed(i)
 	### PARAMETERS
 	depth = 4
 	Nwarmup =10
@@ -19,7 +21,7 @@ for i in range(N):
 	method = 'DIFF-EVOL'
 	param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
 
-	file_name = 'p={}_punti={}_warmup={}_train={}_i_{}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+	file_name = 'p={}_punti={}_warmup={}_train={}_i_{}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes, i)
 
 	global_time = time.time()
 	results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
