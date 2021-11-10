@@ -15,10 +15,9 @@ import random
 from scipy.optimize import minimize
 from qutip import *
 
-noise=False
 class qaoa_pulser(object):
 
-	def __init__(self, pos, noise):
+	def __init__(self, pos, noise = False):
 		self.omega = 1.
 		self.delta = 1.
 		self.U = 10
@@ -30,6 +29,7 @@ class qaoa_pulser(object):
 		self.deg = None
 		self.qubits_dict = dict(enumerate(pos))
 		self.reg = Register(self.qubits_dict)
+		self.quantum_noise = noise
 
 	def pos_to_graph(self, pos): #d is the rbr
 		d = Chadoq2.rydberg_blockade_radius(self.omega)
@@ -67,9 +67,9 @@ class qaoa_pulser(object):
 	
 	def quantum_loop(self, param):
 		sim = self.create_quantum_circuit(param)
-		if noise ==True:
-    			cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
-    			sim.add_config(cfg)
+		if self.quantum_noise:
+			cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
+			sim.add_config(cfg)
 		results = sim.run()
 		count_dict = results.sample_final_state(N_samples=1000) #sample from the state vector
 		return count_dict, results.states

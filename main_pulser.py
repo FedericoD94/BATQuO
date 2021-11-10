@@ -6,20 +6,13 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 
-###
-seed = 23
-np.random.seed(seed)
-random.seed(seed)
-np.set_printoptions(precision=4)
-### Let's decide if we want noise
-noise=False 
-
 ### TRAIN PARAMETERS
 depth = 1
 Nwarmup = 3
 Nbayes = 50
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
+quantum_noise = 1
 
 file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
@@ -33,7 +26,7 @@ pos = np.array(
 				[[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]]
                )
                
-qaoa = qaoa_pulser(pos,noise)
+qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
 ### INITIAL RANDOM POINTS
