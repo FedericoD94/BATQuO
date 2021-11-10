@@ -817,10 +817,10 @@ class DifferentialEvolutionSolver:
                 self.atol +
                 self.tol * np.abs(np.mean(self.population_energies)))
         test_2 = average_norm_distance <= self.dist_tol
-        
+
         return (test_1 and test_2)
-                
-        
+
+
 
     def solve(self):
         """
@@ -957,7 +957,7 @@ class DifferentialEvolutionSolver:
 
         std_population_energy = self.convergence
         conv_flag = self.atol + self.tol * np.abs(np.mean(self.population_energies))
-            
+
         return DE_result, average_norm_distance, std_population_energy, conv_flag
 
     def _calculate_population_energies(self, population):
@@ -1138,7 +1138,7 @@ class DifferentialEvolutionSolver:
         """
         # the population may have just been initialized (all entries are
         # np.inf). If it has you have to calculate the initial energies
-        
+
         if np.all(np.isinf(self.population_energies)):
             self.feasible, self.constraint_violation = (
                 self._calculate_population_feasibilities(self.population))
