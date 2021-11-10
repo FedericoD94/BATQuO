@@ -6,7 +6,13 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 
-seed = 22
+###
+seed = 23
+np.random.seed(seed)
+random.seed(seed)
+np.set_printoptions(precision=4)
+### Let's decide if we want noise
+noise=False 
 
 ### TRAIN PARAMETERS
 depth = 1
@@ -27,7 +33,7 @@ pos = np.array(
 				[[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]]
                )
                
-qaoa = qaoa_pulser(pos)
+qaoa = qaoa_pulser(pos,noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
 ### INITIAL RANDOM POINTS
