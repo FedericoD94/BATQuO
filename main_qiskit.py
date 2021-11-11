@@ -76,14 +76,16 @@ for i_trial in range(trials):
     X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
     gp.fit(X_train, y_train)
 
-    data = [[i_tr] + x + [y_train[i_tr],
-                        qaoa.fidelity_gs(x),
-                        gp.kernel_.get_params()['k2__length_scale'],
-                        gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
-                        ] for i_tr, x in enumerate(X_train)]
+    data = [[i_tr] +
+             x +
+            [y_train[i_tr],
+            qaoa.fidelity_gs(x),
+            gp.kernel_.get_params()['k2__length_scale'],
+            gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
+            ] for i_tr, x in enumerate(X_train)]
 
     ### BAYESIAN OPTIMIZATION
-    init_pos = [0.2, 0.2]*depth
+    init_pos = [0.2, 0.2] * depth
     print('Training ...')
     print(X_train)
     for i in range(Nbayes):
