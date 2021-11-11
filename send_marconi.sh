@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=4
 #SBATCH --ntasks-per-socket=2
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=230000MB 
+#SBATCH --mem=8300MB 
 #SBATCH --account=IscrC_BAT-QuO
 #SBATCH --partition=m100_usr_prod
 #SBATCH --time=00:10:00
@@ -14,9 +14,9 @@
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-module load autoload profile/global 
-module load qiskit
+module list
+module load autoload profile/quantum
+module load autoload qiskit
+module load pulser
 
-echo "python main.py"
-
-
+python main_qiskit.py  --Nbayes 40 --p 4
