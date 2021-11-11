@@ -19,8 +19,9 @@ import random
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-	def __init__(self, *args, optimizer = "fmin_l_bfgs_b",param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
-		super().__init__(optimizer = optimizer, *args, **kwargs)
+	def __init__(self, *args, optimizer = "fmin_l_bfgs_b", param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
+		alpha = 1/np.sqrt(DEFAULT_PARAMS['shots'])
+		super().__init__(optimizer = optimizer, alpha = alpha, *args, **kwargs)
 		self._max_iter = max_iter
 		self._gtol = gtol
 		self.param_range = param_range
@@ -43,14 +44,15 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 				
 		if self.optimizer == "fmin_l_bfgs_b":
 			opt_res = minimize(obj_func,
-							   initial_theta,
-							   method="L-BFGS-B",
-							   jac=True,
-							   bounds=bounds,
-							   options={'maxiter': self._max_iter,
-										'gtol': self._gtol}
-							   )
+									   initial_theta,
+									   method="L-BFGS-B",
+									   jac=True,
+									   bounds=bounds,
+									   options={'maxiter': self._max_iter,
+												'gtol': self._gtol}
+									   )
 			_check_optimize_result("lbfgs", opt_res)
+			
 			theta_opt, func_min = opt_res.x, opt_res.fun
 
 

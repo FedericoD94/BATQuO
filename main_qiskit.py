@@ -10,7 +10,7 @@ np.set_printoptions(precision = 4, suppress = True)
 
 ### PARAMETERS
 depth = 1
-Nwarmup = 3
+Nwarmup = 10
 Nbayes = 90
 method = 'DIFF-EVOL'
 param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
@@ -24,30 +24,27 @@ data = []
 
 
 ### CREATE GRAPH 
-pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
-#pos = np.array([[0, 1], [1, 2], [3, 2], [0, 3], [0, 4], [0,5]])
+#pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
+pos = np.array([[0, 1], [1, 2], [2, 3], [0, 3], [0, 4], [0,5]])
 
 G = nx.Graph()
 G.add_edges_from(pos)
 qaoa = qaoa_qiskit(G)
-gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
+gs_energy, gs_state, degeneracy = qaoa.calculate_gs()
 
 
 ### CREATE GP AND FIT TRAINING DATA
 #kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 
-kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(0.01, 100), nu=1.5)
+kernel =  ConstantKernel(1)*Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], nu=DEFAULT_PARAMS['nu'])
 gp = MyGaussianProcessRegressor(kernel=kernel, 
-                                optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
-                                #optimizer = 'differential_evolution', #fmin_l_bfgs_bor   
+                                optimizer = DEFAULT_PARAMS['optimizer_kernel'],
                                 param_range = param_range,
-                                n_restarts_optimizer=10, 
-                                alpha=1e-2,
-                                normalize_y=True,
-                                max_iter=50000)
+                                n_restarts_optimizer = 1, 
+                                normalize_y = True,
+                                max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
 X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
 gp.fit(X_train, y_train)
-
 
 data = [[i] + x + [y_train[i], 
                     qaoa.fidelity_gs(x), 
@@ -58,7 +55,6 @@ data = [[i] + x + [y_train[i],
 ### BAYESIAN OPTIMIZATION
 init_pos = [0.2, 0.2]*depth
 print('Training ...')
-print(X_train)
 for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)

@@ -12,7 +12,7 @@ Nwarmup = 3
 Nbayes = 50
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
-quantum_noise = 1
+quantum_noise = False
 
 file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
@@ -34,13 +34,13 @@ X_train = []   #data
 y_train = []   #label
 
 ### CREATE GP AND FIT TRAINING DATA
-kernel =  ConstantKernel(1)* Matern(length_scale=0.11, length_scale_bounds=(1e-01, 100.0), nu=1.5)
-gp = MyGaussianProcessRegressor(kernel=kernel,
-                                n_restarts_optimizer=10,
+kernel =  ConstantKernel(1)*Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], nu=DEFAULT_PARAMS['nu'])
+gp = MyGaussianProcessRegressor(kernel=kernel, 
+                                optimizer = DEFAULT_PARAMS['optimizer_kernel'],
                                 param_range = param_range,
-                                alpha=1e-2,
+                                n_restarts_optimizer = 1, 
                                 normalize_y=True,
-                                max_iter=50000)
+                                max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
 X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
 gp.fit(X_train, y_train)

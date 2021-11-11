@@ -159,7 +159,6 @@ class qaoa_qiskit(object):
                     shots=DEFAULT_PARAMS["shots"] ):
 
         backend = Aer.get_backend(backend_name)
-        
         #The two seeds are necessary for reproducibility!  
         simulate = execute(qc, backend=backend, shots=shots, seed_transpiler = DEFAULT_PARAMS["seed"], seed_simulator = DEFAULT_PARAMS["seed"])
         results = simulate.result()
@@ -365,14 +364,13 @@ class qaoa_qiskit(object):
 
         return op_list
 
-    def calculate_gs_qiskit(self, penalty=DEFAULT_PARAMS["penalty"]):
+    def calculate_gs(self, penalty=DEFAULT_PARAMS["penalty"]):
         '''
         returns groundstate and energy
         '''
 
         sx_list = self.list_operator(sigmax())
         sz_list = self.list_operator(sigmaz())
-
 
         H=0
         for n in range(self.N):
@@ -381,14 +379,16 @@ class qaoa_qiskit(object):
             H += penalty/4 * sz_list[edge[0]]*sz_list[edge[1]]
             H -= penalty/4 * sz_list[edge[0]]
             H -= penalty/4 * sz_list[edge[1]]
-        energies, eigenstates = H.eigenstates(sort = 'low')
+        energies, eigenstates = H.eigenstates(sort = 'low')	
+        _, degeneracies = np.unique(energies, return_counts = True)
+        degeneracy = degeneracies[0]
+        
         gs_en = energies[0]
-        if energies[0] ==  energies[1]:
-            deg = True
-            gs_state = eigenstates[:2]
-            gs_state = 1/np.sqrt(2) * np.real(gs_state[0].full() + gs_state[1].full()).reshape(2**self.N)
+        if degeneracy > 1:
+            deg = degeneracy
+            gs_state = eigenstates[:degeneracy]
         else:
-            deg = False
+            deg = degeneracy - 1
             gs_state = eigenstates[0]
             gs_state = gs_state.full()
 
@@ -402,11 +402,15 @@ class qaoa_qiskit(object):
 
         #calculate gs if it is not calculated
         if self.gs_state is None:
-            self.gs_en, self.gs_state, self.deg = self.calculate_gs_qiskit()
+            self.gs_en, self.gs_state, self.deg = self.calculate_gs()
 
         fin_state_exact = self.final_exact_state(point)
-
-        fidelity = np.abs(np.dot(fin_state_exact, self.gs_state))**2
+        
+        if self.deg:
+            fidelities = [np.abs(np.dot(fin_state_exact, self.gs_state[i]))**2 for i in range(len(self.gs_state))]
+            fidelity = np.sum(fidelities)
+        else:
+            fidelity = np.squeeze(np.abs(np.dot(fin_state_exact, self.gs_state))**2)
 
         return fidelity
 
