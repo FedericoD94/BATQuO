@@ -10,9 +10,6 @@ from pulser.simulation import SimConfig
 from itertools import product
 from utils.default_params import *
 import random
-
-
-from scipy.optimize import minimize
 from qutip import *
 
 class qaoa_pulser(object):
@@ -21,9 +18,9 @@ class qaoa_pulser(object):
 		self.omega = 1.
 		self.delta = 1.
 		self.U = 10
-		self.pos_to_graph(pos)
+		self.G = self.pos_to_graph(pos)
+		self.solution = self.classical_solution()
 		self.Nqubit = len(self.G)
-		self.G_comp = nx.complement(self.G)
 		self.gs_state = None
 		self.gs_en = None
 		self.deg = None
@@ -31,9 +28,24 @@ class qaoa_pulser(object):
 		self.reg = Register(self.qubits_dict)
 		self.quantum_noise = noise
 
+	def classical_solution(self):
+		'''
+		Runs through all 2^n possible configurations and estimates the solution
+		'''
+		results = {}
+
+		string_configurations = list(product(['0','1'], repeat=len(self.G)))
+
+		for string_configuration in  string_configurations:
+			single_string = "".join(string_configuration)
+			results[single_string] = self.get_cost_string(string_configuration)
+		
+		d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
+		return d
+			
 	def pos_to_graph(self, pos): #d is the rbr
 		d = Chadoq2.rydberg_blockade_radius(self.omega)
-		self.G = nx.Graph()
+		G = nx.Graph()
 		edges=[]
 		distances = []
 		for n in range(len(pos)-1):
@@ -42,22 +54,22 @@ class qaoa_pulser(object):
 				distances.append(pwd)
 				if pwd < d:
 					edges.append([n,m]) # Below rbr, vertices are connected
-		self.G.add_nodes_from(range(len(pos)))
-		self.G.add_edges_from(edges)
+		G.add_nodes_from(range(len(pos)))
+		G.add_edges_from(edges)
+		return G
+		
 
-	def create_quantum_circuit(self, param, time  = 3000):
+	def create_quantum_circuit(self, params):
 		seq = Sequence(self.reg, Chadoq2)
 		seq.declare_channel('ch0','rydberg_global')
-		middle = int(len(param)/2)
-		param = np.array(param)*1 #wrapper
-		t = param[:middle] #associated to H_c
-		tau = param[middle:] #associated to H_0
-		p = len(t)
+		p = int(len(params)/2)
+		gammas = params[::2]
+		betas = params[1::2]
 		for i in range(p):
-			ttau = int(tau[i]) - int(tau[i]) % 4
-			tt = int(t[i]) - int(t[i]) % 4
-			pulse_1 = Pulse.ConstantPulse(ttau, self.omega, 0, 0) # H_M
-			pulse_2 = Pulse.ConstantPulse(tt, self.delta, 1, 0) # H_M + H_c
+			beta_i = int(betas[i]) - int(betas[i]) % 4
+			gamma_i = int(gammas[i]) - int(gammas[i]) % 4
+			pulse_1 = Pulse.ConstantPulse(beta_i, self.omega, 0, 0) # H_M
+			pulse_2 = Pulse.ConstantPulse(gamma_i, self.delta, 1, 0) # H_M + H_c
 			seq.add(pulse_1, 'ch0')
 			seq.add(pulse_2, 'ch0')
 		seq.measure('ground-rydberg')
@@ -71,15 +83,15 @@ class qaoa_pulser(object):
 			cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
 			sim.add_config(cfg)
 		results = sim.run()
-		count_dict = results.sample_final_state(N_samples=1000) #sample from the state vector
+		count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots']) #sample from the state vector
 		return count_dict, results.states
 
-	def plot_distribution(self, C):
+	def plot_final_state_distribution(self, C):
 		C = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
 		color_dict = {key: 'g' for key in C}
-		indexes = ['01011', '00111']  # MIS indexes
-		for i in indexes:
-			color_dict[i] = 'red'
+		for key in self.solution.keys():
+			val = ''.join(str(key[i]) for i in range(len(key)))
+			color_dict[val] = 'r'
 		plt.figure(figsize=(12,6))
 		plt.xlabel("bitstrings")
 		plt.ylabel("counts")
@@ -157,10 +169,12 @@ class qaoa_pulser(object):
 		Fidelity sampled means how many times the solution(s) is measured
 		'''
 		C = self.get_sampled_state(x)
+		fid = 0
+		for sol_key in self.solution.keys():
+			fid += C[sol_key]
 		
-		indexes = ['01011', '00111']  # MIS indexes
-	
-		return (C[indexes[0]]+C[indexes[1]])
+		fid = fid/DEFAULT_PARAMS['shots']
+		return fid
 		
 	def fidelity_gs_exact(self, param):
 		'''
@@ -173,21 +187,30 @@ class qaoa_pulser(object):
 		fid = fidelity(self.gs_state, evolution_states[-1])
 		return fid
 
+	def get_cost_string(self, string):
+		'Receives a string of 0 and 1s and gives back its cost to the MIS hamiltonian'
+		penalty = self.U
+		configuration = np.array(tuple(string),dtype=int)
+		
+		cost = 0
+		cost = -sum(configuration)
+		for edge in self.G.edges:
+			cost += penalty*(configuration[edge[0]]*configuration[edge[1]])
+		
+		return cost
+			
 	def get_cost_dict(self, counter):
 		total_cost = 0
 		for key in counter.keys():
-			cost = 0
-			penalty = self.U
-			A = np.array(adjacency_matrix(self.G).todense())
-			z = np.array(tuple(key),dtype=int)
-			for i in range(len(z)):
-				for j in range(i,len(z)):
-					cost += A[i,j]*z[i]*z[j]*penalty # if there's an edge between i,j and they are both in |1> state.
-
-			cost -= np.sum(z) #to count for the 0s instead of the 1s
+			cost = self.get_cost_string(key)
 			total_cost += cost * counter[key]
 		return total_cost / sum(counter.values())
-
+	
+	def get_evolution_states(self, params):
+		C, evol= self.quantum_loop(params)
+		
+		return C, evol
+		
 	def get_sampled_state(self, params):
 		C, _ = self.quantum_loop(params)
 		return C

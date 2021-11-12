@@ -6,9 +6,11 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 
+np.set_printoptions(precision = 4, suppress = True)
+
 ### TRAIN PARAMETERS
-depth = 1
-Nwarmup = 3
+depth = 2
+Nwarmup = 10
 Nbayes = 50
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
@@ -21,14 +23,17 @@ global_time = time.time()
 results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
                     'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
 
+
 ### CREATE GRAPH AND REGISTER 
-pos = np.array(
-				[[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]]
-               )
+#pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
+pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
                
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
+x = [3000, 25]
+
+exit()
 ### INITIAL RANDOM POINTS
 X_train = []   #data
 y_train = []   #label
@@ -59,6 +64,7 @@ print(X_train)
 for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
+    next_point = [int(i) for i in next_point]
     bayes_time = time.time() - start_time
     y_next_point = qaoa.expected_energy(next_point)
     qaoa_time = time.time() - start_time - bayes_time

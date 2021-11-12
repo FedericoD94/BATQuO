@@ -18,8 +18,7 @@ Ntots = [100, 150, 200, 250]
 for Ntot in Ntots:
 	for percentage_warmup in percentages_warmup:
 		### PARAMETERS
-		#depth = int(sys.argv[1])
-		depth = 1
+		depth = int(sys.argv[1]) 
 		Nwarmup = int(Ntot*percentage_warmup)
 		Nbayes = Ntot - Nwarmup
 		backend = 'QISKIT'

@@ -46,6 +46,14 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
 X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
 gp.fit(X_train, y_train)
 
+C = qaoa.final_sampled_state([0.4, 2.8])
+qaoa.plot_final_state_distribution(C)
+plt.show()
+en, state, deg = qaoa.calculate_gs()
+print(en, state, deg)
+print(qaoa.fidelity_gs([0.4, 2.8]))
+exit()
+
 data = [[i] + x + [y_train[i], 
                     qaoa.fidelity_gs(x), 
                     gp.kernel_.get_params()['k2__length_scale'],
