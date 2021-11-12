@@ -35,7 +35,9 @@ gs_energy, gs_state, degeneracy = qaoa.calculate_gs()
 
 ### CREATE GP AND FIT TRAINING DATA
 #kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 
-kernel =  ConstantKernel(1)*Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], nu=DEFAULT_PARAMS['nu'])
+kernel =  ConstantKernel(1)*Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
+                                    length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], 
+                                    nu=DEFAULT_PARAMS['nu'])
 gp = MyGaussianProcessRegressor(kernel=kernel, 
                                 optimizer = DEFAULT_PARAMS['optimizer_kernel'],
                                 param_range = param_range,

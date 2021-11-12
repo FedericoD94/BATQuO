@@ -26,24 +26,22 @@ for depth in depths:
 	data = []
 
 	### CREATE GRAPH 
-	pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
-	#pos = np.array([[0, 1], [1, 2], [3, 2], [0, 3], [0, 4], [0,5]])
+	#pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
+	pos = np.array([[0, 1], [1, 2], [3, 2], [0, 3], [0, 4], [0,5]])
 
 	G = nx.Graph()
 	G.add_edges_from(pos)
 	qaoa = qaoa_qiskit(G)
-	gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
+	gs_energy, gs_state, degeneracy = qaoa.calculate_gs()
 
 
 	### CREATE GP AND FIT TRAINING DATA
-	#kernel =  ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2)) 
 	kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(0.01, 100), nu=1.5)
 	gp = MyGaussianProcessRegressor(kernel=kernel, 
 									optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
 									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor     
 									param_range = param_range,
-									n_restarts_optimizer=10, 
-									alpha=1e-2,
+									n_restarts_optimizer=1, 
 									normalize_y=True,
 									max_iter=50000)
 	if depth == 1:
@@ -54,7 +52,7 @@ for depth in depths:
 	gp.fit(X_train, y_train)
 
 	data = [[i] + x + [y_train[i], 
-						qaoa.fidelity_gs(x), 
+						qaoa.fidelity_gs_exact(x), 
 						gp.kernel_.get_params()['k2__length_scale'],
 						gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
 						] for i,x in enumerate(X_train)]
@@ -68,7 +66,7 @@ for depth in depths:
 		bayes_time = time.time() - start_time
 		y_next_point = qaoa.expected_energy(next_point)
 		qaoa_time = time.time() - start_time - bayes_time
-		fidelity = qaoa.fidelity_gs(next_point)
+		fidelity = qaoa.fidelity_gs_exact(next_point)
 		corr_length = gp.kernel_.get_params()['k2__length_scale']
 		constant_kernel = gp.kernel_.get_params()['k1__constant_value']
 		gp.fit(next_point, y_next_point)
