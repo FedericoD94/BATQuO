@@ -10,7 +10,8 @@ def create_random_graph(num_nodes, average_connectivity, draw=False):
     s = np.where(np.random.binomial(1, average_connectivity, len(edges_graph)))[0]
     G.add_edges_from(edges_graph[s])
 
-    if draw:
+    if isinstance(draw, str):
         nx.draw(G, with_labels=True)
-        plt.show()
+        plt.savefig(draw + ".pdf")
+
     return G

@@ -51,7 +51,8 @@ results_structure = ['iter ',
 # pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
 # pos = np.array([[0, 1], [1, 2], [3, 2], [0, 3], [0, 4], [0,5]])
 np.random.seed(seed)
-G = create_random_graph(num_nodes, average_connectivity, draw=False)
+num_graph = seed
+G = create_random_graph(num_nodes, average_connectivity, draw=f"{num_graph}")
 
 qaoa = qaoa_qiskit(G)
 gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
@@ -59,7 +60,7 @@ gs_energy, gs_state, degeneracy = qaoa.calculate_gs_qiskit()
 print(gs_energy)
 for i_trial in range(trials):
     DEFAULT_PARAMS["seed"] = seed + i_trial
-    file_name = f'p={depth}_punti={Nwarmup + Nbayes}_warmup={Nwarmup}_train={Nbayes}_trial={i_trial}.dat'
+    file_name = f'p={depth}_punti={Nwarmup + Nbayes}_warmup={Nwarmup}_train={Nbayes}_trial={i_trial}_graph_{num_graph}.dat'
     data = []
     ### CREATE GP AND FIT TRAINING DATA
     # kernel = ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2))
