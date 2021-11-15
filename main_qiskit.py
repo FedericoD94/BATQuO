@@ -18,7 +18,7 @@ param_range = [0.1, np.pi]   # extremes where to search for the values of gamma 
 file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 global_time = time.time()
-results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
+results_structure = ['iter ', 'point ', 'energy ', 'variance', 'fidelity ', 'corr_length ', 'const kernel ',
                     'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
 data = []
 
@@ -45,7 +45,7 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 normalize_y = True,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
-X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
+X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, depth, param_range, return_variance=True)
 gp.fit(X_train, y_train)
 
 C = qaoa.final_sampled_state([0.4, 2.8])
@@ -53,11 +53,12 @@ qaoa.plot_final_state_distribution(C)
 plt.show()
 en, state, deg = qaoa.calculate_gs()
 print(en, state, deg)
-print(qaoa.fidelity_gs([0.4, 2.8]))
-exit()
+print(qaoa.fidelity_gs_exact([0.4, 2.8]))
+# exit() 
 
 data = [[i] + x + [y_train[i], 
-                    qaoa.fidelity_gs(x), 
+                    var_train[i],
+                    qaoa.fidelity_gs_exact(x), 
                     gp.kernel_.get_params()['k2__length_scale'],
                     gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
                     ] for i,x in enumerate(X_train)]
@@ -69,15 +70,15 @@ for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
     bayes_time = time.time() - start_time
-    y_next_point = qaoa.expected_energy(next_point)
+    y_next_point, variance_next_point = qaoa.expected_energy_and_variance(next_point)
     qaoa_time = time.time() - start_time - bayes_time
-    fidelity = qaoa.fidelity_gs(next_point)
+    fidelity = qaoa.fidelity_gs_exact(next_point)
     corr_length = gp.kernel_.get_params()['k2__length_scale']
     constant_kernel = gp.kernel_.get_params()['k1__constant_value']
     gp.fit(next_point, y_next_point)
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
-    new_data = [i+Nwarmup] + next_point + [y_next_point, fidelity, corr_length, constant_kernel, 
+    new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fidelity, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
