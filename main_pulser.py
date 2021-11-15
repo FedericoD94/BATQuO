@@ -9,14 +9,14 @@ import time
 np.set_printoptions(precision = 4, suppress = True)
 
 ### TRAIN PARAMETERS
-depth = 2
+depth = 4
 Nwarmup = 10
-Nbayes = 50
+Nbayes = 150
 method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
 quantum_noise = False
 
-file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'data/chair graph/pulser_max_iter/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
 global_time = time.time()
@@ -31,8 +31,11 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-x = [3000, 25]
+x = [929.0000, 400.0000, 928.0000, 366.0000, 1016.0000, 230.0000, 1029.0000, 330.0000]
+C = qaoa.get_sampled_state(x)
+qaoa.plot_final_state_distribution(C)
 
+plt.show()
 exit()
 ### INITIAL RANDOM POINTS
 X_train = []   #data
@@ -60,7 +63,6 @@ data = [[i] + x + [y_train[i],
                     
 init_pos = [0.2, 0.2]*depth
 print('Training ...')
-print(X_train)
 for i in range(Nbayes):
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
@@ -82,7 +84,6 @@ for i in range(Nbayes):
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
     print((i+1),' / ',Nbayes)
-    print(new_data)
     format = '%.d ' + (len(new_data) - 1)*'%.4f '
     np.savetxt(file_name, data, fmt = format)
      

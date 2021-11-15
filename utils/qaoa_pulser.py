@@ -1,7 +1,5 @@
 import numpy as np
-import igraph
 import networkx as nx
-from networkx.linalg.graphmatrix import adjacency_matrix
 import matplotlib.pyplot as plt
 
 from pulser import Pulse, Sequence, Register, Simulation
