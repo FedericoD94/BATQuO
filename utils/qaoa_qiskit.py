@@ -172,6 +172,36 @@ class qaoa_qiskit(object):
 		amplitudes = amplitudes / shots
 
 		return extimated_en
+	
+	def expected_energy_and_variance(self,
+			 params,
+			 shots=DEFAULT_PARAMS["shots"]):
+		'''
+		Applies QAOA circuit and estimates final energy and variance
+		'''
+
+		counts = self.final_sampled_state(params)
+		extimated_en = 0
+
+		for configuration in counts:
+			prob_of_configuration = counts[configuration]/shots
+			extimated_en += prob_of_configuration * self.evaluate_cost(configuration)
+
+		amplitudes =  np.fromiter(counts.values(), dtype=float)
+		amplitudes = amplitudes / shots
+
+		return extimated_en, self.sample_variance(extimated_en, counts, shots)
+	
+	def sample_variance(self, sample_mean, counts, shots):
+		estimated_variance = 0
+
+		for configuration in counts:
+			hamiltonian_i = self.evaluate_cost(configuration) # energy of i-th configuration
+			estimated_variance += counts[configuration] * (sample_mean - hamiltonian_i)**2
+		
+		estimated_variance /= shots - 1 # use unbiased variance estimator
+
+		return estimated_variance
 
 	def plot_landscape(self,
 					param_range,
@@ -228,9 +258,10 @@ class qaoa_qiskit(object):
 
 
 
-	def generate_random_points(self, N_points, depth, extrem_params, fixed_params=None):
+	def generate_random_points(self, N_points, depth, extrem_params, fixed_params=None, return_variance=False):
 		X = []
 		Y = []
+		VAR = []
 		np.random.seed(DEFAULT_PARAMS['seed'])
 		random.seed(DEFAULT_PARAMS['seed'])
 		
@@ -240,10 +271,14 @@ class qaoa_qiskit(object):
 			else:
 				x = fixed_params + [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(2)]
 			X.append(x)
-			y = self.expected_energy(x)
+			y, var_y = self.expected_energy_and_variance(x)
 			Y.append(y)
+			VAR.append(var_y)
 
-		return X, Y
+		if return_variance:
+			return X, Y, VAR
+		else:
+			return X, Y
 
 	def list_operator(self, op):
 		''''
@@ -322,7 +357,3 @@ class qaoa_qiskit(object):
 		
 		fid = fid/DEFAULT_PARAMS['shots']
 		return fid
-		
-
-
-
