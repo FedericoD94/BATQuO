@@ -48,7 +48,8 @@ class qaoa_qiskit(object):
 
 		eigen_configurations = list(product(['0','1'], repeat=len(self.G)))
 		for eigen_configuration in eigen_configurations:
-			results[eigen_configuration] = self.evaluate_cost(eigen_configuration)
+			single_string = "".join(eigen_configuration)
+			results[single_string] = self.evaluate_cost(eigen_configuration)
 			
 		d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
 		return d
@@ -255,8 +256,6 @@ class qaoa_qiskit(object):
 		plt.xticks(rotation='vertical')
 		plt.bar(sorted_freq_dict.keys(), sorted_freq_dict.values(), width=0.5, color = color_dict.values())
 
-
-
 	def generate_random_points(self, N_points, depth, extrem_params, fixed_params=None, return_variance=False):
 		X = []
 		Y = []
@@ -345,14 +344,40 @@ class qaoa_qiskit(object):
 
 		return fidelity
 		
-	def fidelity_gs_sampled(self, x):
+	def fidelity_gs_sampled(self, x, solution_ratio = False):
 		'''
 		Fidelity sampled means how many times the solution(s) is measured
 		'''
+		#calculate gs if it is not calculated
+		if self.gs_state is None:
+			self.gs_en, self.gs_state, self.deg = self.calculate_gs()
+			
 		C = self.final_sampled_state(x)
 		fid = 0
 		for sol_key in self.solution.keys():
 			fid += C[sol_key]
 		
 		fid = fid/DEFAULT_PARAMS['shots']
-		return fid
+		
+		if solution_ratio:
+			sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
+			first_key, second_key =  list(sorted_dict.keys())[:2]
+			if (first_key in self.solution.keys()) and (second_key !=0):
+				sol_ratio = C[first_key]/C[second_key]
+			else:
+				sol_ratio = 0
+			return fid, sol_ratio
+		else:
+			return fid
+			
+	def solution_ratio(self, x):
+		sol_ratio = 0
+		
+		C = self.final_sampled_state(x)
+		
+		sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
+		first_key, second_key =  list(sorted_dict.keys())[:2]
+		if (first_key in self.solution.keys()) and (second_key !=0):
+			sol_ratio = C[first_key]/C[second_key]
+		
+		return sol_ratio

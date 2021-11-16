@@ -203,7 +203,7 @@ class qaoa_pulser(object):
 		else:
 			return X, Y
 
-	def fidelity_gs_sampled(self, x):
+	def fidelity_gs_sampled(self, x, solution_ratio = False):
 		'''
 		Fidelity sampled means how many times the solution(s) is measured
 		'''
@@ -213,7 +213,27 @@ class qaoa_pulser(object):
 			fid += C[sol_key]
 		
 		fid = fid/DEFAULT_PARAMS['shots']
-		return fid
+		
+		if solution_ratio:
+			sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
+			first_key, second_key =  list(sorted_dict.keys())[:2]
+			if (first_key in self.solution.keys()) and (second_key !=0):
+				sol_ratio = C[first_key]/C[second_key]
+			else:
+				sol_ratio = 0
+			return fid, sol_ratio
+		else:
+			return fid
+			
+	def solution_ratio(self, x):
+		sol_ratio = 0
+		C = self.get_sampled_state(x)
+		sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
+		first_key, second_key =  list(sorted_dict.keys())[:2]
+		if (first_key in self.solution.keys()) and (second_key !=0):
+			sol_ratio = C[first_key]/C[second_key]
+			
+		return sol_ratio
 		
 	def fidelity_gs_exact(self, param):
 		'''

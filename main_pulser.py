@@ -9,7 +9,6 @@ import time
 np.set_printoptions(precision = 4, suppress = True)
 
 ### TRAIN PARAMETERS
-#depth = sys.argv[1]
 depth = 1
 Nwarmup = 10
 Nbayes = 150
@@ -21,7 +20,7 @@ file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbaye
 
 data = []
 global_time = time.time()
-results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
+results_structure = ['iter ', 'point ', 'energy ', 'variance', 'fidelity exact', 'fidelity sampled', 'ratio', 'corr_length ', 'const kernel ',
                     'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
 
 ### CREATE GRAPH AND REGISTER 
@@ -30,8 +29,6 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
                
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
-
-
 
 ### INITIAL RANDOM POINTS
 X_train = []   #data
@@ -54,6 +51,7 @@ data = [[i] + x + [y_train[i],
 					var_train[i],
                     qaoa.fidelity_gs_exact(x), 
                     qaoa.fidelity_gs_sampled(x),
+                    qaoa.solution_ratio(x),
                     gp.kernel_.get_params()['k2__length_scale'],
                     gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
                     ] for i, x in enumerate(X_train)]
@@ -69,6 +67,7 @@ for i in range(Nbayes):
     qaoa_time = time.time() - start_time - bayes_time
     fid_exact = qaoa.fidelity_gs_exact(next_point)
     fid_sampled = qaoa.fidelity_gs_sampled(next_point)
+    sol_ratio = qaoa.solution_ratio(next_point)
 
     corr_length = gp.kernel_.get_params()['k2__length_scale']
     constant_kernel = gp.kernel_.get_params()['k1__constant_value']
@@ -76,7 +75,7 @@ for i in range(Nbayes):
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
     
-    new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, corr_length, constant_kernel, 
+    new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, sol_ratio, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
