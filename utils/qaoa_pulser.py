@@ -113,6 +113,45 @@ class qaoa_pulser(object):
 	
 		return op_list
 	
+	def plot_landscape(self,
+				param_range,
+				fixed_params = None,
+				num_grid=DEFAULT_PARAMS["num_grid"],
+				save = False):
+		'''
+		Plot energy landscape at p=1 (default) or at p>1 if you give the previous parameters in
+		the fixed_params argument
+		'''
+
+		lin = np.linspace(param_range[0],param_range[1], num_grid)
+		Q = np.zeros((num_grid, num_grid))
+		Q_params = np.zeros((num_grid, num_grid, 2))
+		for i, gamma in enumerate(lin):
+			for j, beta in enumerate(lin):
+				if fixed_params is None:
+					params = [gamma, beta]
+				else:
+					params = fixed_params + [gamma, beta]
+				Q[j, i] = self.expected_energy(params)
+				Q_params[j,i] = np.array([gamma, beta])
+
+
+		plt.imshow(Q, origin = 'lower', extent = [param_range[0],param_range[1],param_range[0],param_range[1]])
+		plt.title('Grid Search: [{} x {}]'.format(num_grid, num_grid))
+		plt.xticks(fontsize = 15)
+		plt.yticks(fontsize = 15)
+
+		cb = plt.colorbar()
+		plt.xlabel(r'$\gamma$', fontsize=20)
+		plt.ylabel(r'$\beta$', fontsize=20)
+		cb.ax.tick_params(labelsize=15)
+		plt.show()
+
+		if save:
+			np.savetxt('../data/raw/graph_Grid_search_{}x{}.dat'.format(num_grid, num_grid), Q)
+			np.savetxt('../data/raw/graph_Grid_search_{}x{}_params.dat'.format(num_grid, num_grid), Q)
+			
+			
 	def calculate_physical_gs(self):
 		'''
 		returns groundstate and energy 
@@ -144,10 +183,10 @@ class qaoa_pulser(object):
 	
 		return self.gs_en, self.gs_state, self.deg
 
-	def generate_random_points(self, Npoints, depth, extrem_params):
+	def generate_random_points(self, Npoints, depth, extrem_params, return_variance = True):
 		X = []
 		Y = []
-		
+		VAR = []
 		np.random.seed(DEFAULT_PARAMS['seed'])
 		random.seed(DEFAULT_PARAMS['seed'])
         
@@ -155,12 +194,14 @@ class qaoa_pulser(object):
 			x = [np.random.randint(extrem_params[0],extrem_params[1]),
 					np.random.randint(extrem_params[0],extrem_params[1])]*depth
 			X.append(x)
-			y = self.expected_energy(x)
+			y, var_y = self.expected_energy_and_variance(x)
 			Y.append(y)
+			VAR.append(var_y)
 	
-		if Npoints == 1:
-			X = np.reshape(X, (depth*2,))
-		return X, Y
+		if return_variance:
+			return X, Y, VAR
+		else:
+			return X, Y
 
 	def fidelity_gs_sampled(self, x):
 		'''
@@ -197,6 +238,35 @@ class qaoa_pulser(object):
 		
 		return cost
 			
+	def expected_energy_and_variance(self,
+			 params,
+			 shots=DEFAULT_PARAMS["shots"]):
+		'''
+		Applies QAOA circuit and estimates final energy and variance
+		'''
+
+		counts = self.get_sampled_state(params)
+		extimated_en = 0
+
+		for configuration in counts:
+			prob_of_configuration = counts[configuration]/shots
+			extimated_en += prob_of_configuration * self.get_cost_string(configuration)
+
+		amplitudes = np.fromiter(counts.values(), dtype=float)
+		amplitudes = amplitudes / shots
+
+		return extimated_en, self.sample_variance(extimated_en, counts, shots)
+	
+	def sample_variance(self, sample_mean, counts, shots):
+		estimated_variance = 0
+		for configuration in counts:
+			hamiltonian_i = self.get_cost_string(configuration) # energy of i-th configuration
+			estimated_variance += counts[configuration] * (sample_mean - hamiltonian_i)**2
+		
+		estimated_variance /= shots - 1 # use unbiased variance estimator
+
+		return estimated_variance
+		
 	def get_cost_dict(self, counter):
 		total_cost = 0
 		for key in counter.keys():

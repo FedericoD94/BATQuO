@@ -9,20 +9,20 @@ import time
 np.set_printoptions(precision = 4, suppress = True)
 
 ### TRAIN PARAMETERS
-depth = 4
+#depth = sys.argv[1]
+depth = 1
 Nwarmup = 10
 Nbayes = 150
 method = 'DIFF-EVOL'
-param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
-quantum_noise = False
+param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
+quantum_noise = 0
 
-file_name = 'data/chair graph/pulser_max_iter/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
 global_time = time.time()
 results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
                     'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
-
 
 ### CREATE GRAPH AND REGISTER 
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -31,12 +31,8 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-x = [929.0000, 400.0000, 928.0000, 366.0000, 1016.0000, 230.0000, 1029.0000, 330.0000]
-C = qaoa.get_sampled_state(x)
-qaoa.plot_final_state_distribution(C)
 
-plt.show()
-exit()
+
 ### INITIAL RANDOM POINTS
 X_train = []   #data
 y_train = []   #label
@@ -50,11 +46,12 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 normalize_y=True,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
-X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
+X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, depth, param_range, return_variance = True)
 gp.fit(X_train, y_train)
 
 
 data = [[i] + x + [y_train[i], 
+					var_train[i],
                     qaoa.fidelity_gs_exact(x), 
                     qaoa.fidelity_gs_sampled(x),
                     gp.kernel_.get_params()['k2__length_scale'],
@@ -68,7 +65,7 @@ for i in range(Nbayes):
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
     next_point = [int(i) for i in next_point]
     bayes_time = time.time() - start_time
-    y_next_point = qaoa.expected_energy(next_point)
+    y_next_point, variance_next_point = qaoa.expected_energy_and_variance(next_point)
     qaoa_time = time.time() - start_time - bayes_time
     fid_exact = qaoa.fidelity_gs_exact(next_point)
     fid_sampled = qaoa.fidelity_gs_sampled(next_point)
@@ -79,12 +76,11 @@ for i in range(Nbayes):
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
     
-    new_data = [i+Nwarmup] + next_point + [y_next_point, fid_exact, fid_sampled, corr_length, constant_kernel, 
+    new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
-    print((i+1),' / ',Nbayes)
-    format = '%.d ' + (len(new_data) - 1)*'%.4f '
+    format = '%d ' + 2*depth*'%4d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
     np.savetxt(file_name, data, fmt = format)
      
 best_x, best_y, where = gp.get_best_point()

@@ -32,7 +32,6 @@ class qaoa_qiskit(object):
 		configuration: eigenvalues
 		'''
 		configuration = np.array(tuple(string),dtype=int)
-		
 		cost = 0
 		cost = -sum(configuration)
 		for edge in self.G.edges:
@@ -187,7 +186,7 @@ class qaoa_qiskit(object):
 			prob_of_configuration = counts[configuration]/shots
 			extimated_en += prob_of_configuration * self.evaluate_cost(configuration)
 
-		amplitudes =  np.fromiter(counts.values(), dtype=float)
+		amplitudes = np.fromiter(counts.values(), dtype=float)
 		amplitudes = amplitudes / shots
 
 		return extimated_en, self.sample_variance(extimated_en, counts, shots)
