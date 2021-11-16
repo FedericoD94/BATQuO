@@ -14,6 +14,7 @@ from sklearn.utils.optimize import _check_optimize_result
 from scipy.stats import norm
 from sklearn.preprocessing import StandardScaler
 import random
+import dill
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
@@ -236,7 +237,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 											bounds = [(0,1), (0,1)]*depth,
 											callback = callbackF,
 											maxiter = 100*depth,
-											popsize = 15*depth,
+											popsize = 15,
 											tol = .001,
 											dist_tol = 0.01,
 											seed = self.seed,
