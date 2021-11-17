@@ -152,11 +152,12 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		f_x, sigma_x = self.predict(x, return_std=True)
 
 		K_xx = sigma_x**2
-		f_prime = np.min(self.Y)
+		f_prime = self.y_best
 
         #Ndtr is a particular routing in scipy that computes the CDF in half the time
 		#cdf = norm.cdf(x = f_prime, loc = f_x , scale = sigma_x)
 		cdf = ndtr((f_prime - f_x)/sigma_x)
+		#pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x))
 		pdf = norm.pdf(x = f_prime, loc = f_x , scale = sigma_x)
 		alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
 
