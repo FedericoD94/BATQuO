@@ -12,6 +12,7 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern, ConstantK
 from itertools import product
 from sklearn.utils.optimize import _check_optimize_result
 from scipy.stats import norm
+from scipy.special import ndtr
 from sklearn.preprocessing import StandardScaler
 import random
 import dill
@@ -153,7 +154,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		K_xx = sigma_x**2
 		f_prime = np.min(self.Y)
 
-		cdf = norm.cdf(x = f_prime, loc = f_x , scale = sigma_x)
+        #Ndtr is a particular routing in scipy that computes the CDF in half the time
+		#cdf = norm.cdf(x = f_prime, loc = f_x , scale = sigma_x)
+		cdf = ndtr((f_prime - f_x)/sigma_x)
 		pdf = norm.pdf(x = f_prime, loc = f_x , scale = sigma_x)
 		alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
 
@@ -235,7 +238,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 		if method == 'DIFF-EVOL':
 			with DifferentialEvolutionSolver(self.acq_func,
 											bounds = [(0,1), (0,1)]*depth,
-											callback = callbackF,
+											callback = None,
 											maxiter = 100*depth,
 											popsize = 15,
 											tol = .001,
