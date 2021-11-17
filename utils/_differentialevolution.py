@@ -12,6 +12,8 @@ from scipy._lib._util import check_random_state, MapWrapper
 from scipy.optimize._constraints import (Bounds, new_bounds_to_old,
                                          NonlinearConstraint, LinearConstraint)
 from scipy.sparse import issparse
+from scipy.spatial import distance
+
 
 __all__ = ['differential_evolution', 'DifferentialEvolutionSolver']
 
@@ -804,7 +806,7 @@ class DifferentialEvolutionSolver:
         """
         Return True if the solver has converged.
         """
-        distance_vectors_matrix = np.array([[np.linalg.norm(p - j) for p in self.population] for j in self.population])
+        distance_vectors_matrix = distance.cdist(self.population, self.population)
         distance_vectors = np.triu(distance_vectors_matrix)
 
         average_norm_distance = 2*np.sum(distance_vectors)/(len(distance_vectors)*(len(distance_vectors)-1))

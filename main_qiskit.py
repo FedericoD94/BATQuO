@@ -43,7 +43,6 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 n_restarts_optimizer = 1, 
                                 normalize_y = True,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
-
 X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, depth, param_range, return_variance=True)
 gp.fit(X_train, y_train)
 
