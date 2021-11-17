@@ -257,30 +257,7 @@ class qaoa_qiskit(object):
         plt.xticks(rotation='vertical')
         plt.bar(sorted_freq_dict.keys(), sorted_freq_dict.values(), width=0.5, color = color_dict.values())
 
-    def generate_random_points_old(self, N_points, depth, extrem_params, fixed_params=None, return_variance=False):
-        X = []
-        Y = []
-        VAR = []
-        np.random.seed(DEFAULT_PARAMS['seed'])
-        random.seed(DEFAULT_PARAMS['seed'])
-        
-        for i in range(N_points):
-            if fixed_params is None:
-                x = [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(depth*2)]
-            else:
-                x = fixed_params + [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(2)]
-            X.append(x)
-            y, var_y = self.expected_energy_and_variance(x)
-            Y.append(y)
-            VAR.append(var_y)
-
-        if return_variance:
-            return X, Y, VAR
-        else:
-            return X, Y
-
-
-    def generate_random_points(self, N_points, depth, extrem_params, fixed_params=None, return_variance=False):
+    def generate_random_points(self, N_points, depth, extreme_params, fixed_params=None, return_variance=False):
         X = []
         Y = []
         VAR = []
@@ -288,16 +265,16 @@ class qaoa_qiskit(object):
         random.seed(DEFAULT_PARAMS['seed'])
         
         hypercube_sampler = qmc.LatinHypercube(d=depth*2)
-        X =  hypercube_sampler.random(N_points).tolist()
+        X =  hypercube_sampler.random(N_points)
+        l_bounds = np.repeat(extreme_params[0], 2*depth)
+        u_bounds = np.repeat(extreme_params[1], 2*depth)
+        X = qmc.scale(X, l_bounds, u_bounds)
+        X = X.tolist()
         for x in X:
-#       for i in range(N_points):
-#           if fixed_params is None:
-#               x = [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(depth*2)]
-#           else:
-#               x = fixed_params + [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(2)]
             y, var_y = self.expected_energy_and_variance(x)
             Y.append(y)
-            VAR.append(var_y)
+            if return_variance:
+                VAR.append(var_y)
 
         if return_variance:
             return X, Y, VAR
