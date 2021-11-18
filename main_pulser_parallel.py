@@ -10,17 +10,18 @@ import sys
 np.set_printoptions(precision = 4, suppress = True)
 
 percentage_warmup = 0.1
-Ntot = 200
+Ntot = 1000
 
 ### PARAMETERS
 depth = int(sys.argv[1])
 Nwarmup = 20
-Nbayes = 180
+Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 quantum_noise = 0
 
-file_name = 'pulser_corr_length/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+
+file_name = 'pulser_1000_run/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
 global_time = time.time()
@@ -34,7 +35,19 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
+'''
+#x = [3000,  100, 2969 , 100, 2137, 1528,  100, 2496]
+x = [3000,  100,  100, 2353]
+C = qaoa.get_sampled_state(x)
+print(C)
+N = 1000
+en = []
+for i in range(N):
+ en.append(qaoa.expected_energy(x))
+print(np.average(en), np.std(en))
 
+exit()
+'''
 ### INITIAL RANDOM POINTS
 X_train = []   #data
 y_train = []   #label
@@ -79,7 +92,6 @@ for i in range(Nbayes):
     fid_exact = qaoa.fidelity_gs_exact(next_point)
     fid_sampled = qaoa.fidelity_gs_sampled(next_point)
     sol_ratio = qaoa.solution_ratio(next_point)
-
     corr_length = gp.kernel_.get_params()['k1__length_scale']
     print(corr_length)    
     if np.abs(np.log(np.abs(0.01-corr_length))) > 8:
@@ -106,6 +118,7 @@ for i in range(Nbayes):
                                     bayes_time, qaoa_time, kernel_time, step_time]                    
     data.append(new_data)
     format = '%d ' + 2*depth*'%4d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
+
     np.savetxt(file_name, data, fmt = format)
      
 best_x, best_y, where = gp.get_best_point()
