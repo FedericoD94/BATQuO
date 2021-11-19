@@ -1,7 +1,7 @@
 import networkx as nx
 from collections import Counter, defaultdict, namedtuple
 from itertools import product
-import pandas as pd
+# import pandas as pd
 import random
 import numpy as np
 
