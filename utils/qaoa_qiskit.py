@@ -20,7 +20,7 @@ class qaoa_qiskit(object):
         self.G = G
         self.N = len(G)
         self.G_comp = nx.complement(G)
-        self.gs_state = None
+        self.gs_states = None
         self.gs_en = None
         self.deg = None
 
@@ -159,8 +159,8 @@ class qaoa_qiskit(object):
                     shots=DEFAULT_PARAMS["shots"] ):
 
         backend = Aer.get_backend(backend_name)
-        
-        #The two seeds are necessary for reproducibility!  
+
+        #The two seeds are necessary for reproducibility!
         simulate = execute(qc, backend=backend, shots=shots, seed_transpiler = DEFAULT_PARAMS["seed"], seed_simulator = DEFAULT_PARAMS["seed"])
         results = simulate.result()
 
@@ -337,7 +337,7 @@ class qaoa_qiskit(object):
         Y = []
         np.random.seed(DEFAULT_PARAMS['seed'])
         random.seed(DEFAULT_PARAMS['seed'])
-        
+
         for i in range(N_points):
             if fixed_params is None:
                 x = [random.uniform(extrem_params[0], extrem_params[1]) for _ in range(depth*2)]
@@ -382,33 +382,32 @@ class qaoa_qiskit(object):
             H -= penalty/4 * sz_list[edge[0]]
             H -= penalty/4 * sz_list[edge[1]]
         energies, eigenstates = H.eigenstates(sort = 'low')
-        gs_en = energies[0]
-        if energies[0] ==  energies[1]:
-            deg = True
-            gs_state = eigenstates[:2]
-            gs_state = 1/np.sqrt(2) * np.real(gs_state[0].full() + gs_state[1].full()).reshape(2**self.N)
-        else:
-            deg = False
-            gs_state = eigenstates[0]
-            gs_state = gs_state.full()
 
-        self.gs_state = gs_state
-        self.gs_en = gs_en
+        degeneracy = next((i for i, x in enumerate(np.diff(energies)) if x), 1) + 1
+        deg = (degeneracy > 1)
+        gs_en = energies[0]
+        gs_states = [state_gs.full() for state_gs in eigenstates[:degeneracy]]
+        self.gs_states = gs_states
+        self.gs_en = gs_states
         self.deg = deg
 
-        return gs_en, gs_state, deg
+        return gs_en, gs_states, deg
+
 
     def fidelity_gs(self, point):
 
         #calculate gs if it is not calculated
-        if self.gs_state is None:
-            self.gs_en, self.gs_state, self.deg = self.calculate_gs_qiskit()
+        if self.gs_states is None:
+            self.gs_en, self.gs_states, self.deg = self.calculate_gs_qiskit()
 
         fin_state_exact = self.final_exact_state(point)
+        fidelities= []
+        for st_idx, gs_state in enumerate(self.gs_states):
+            fidelities.append(np.abs(np.dot(fin_state_exact, gs_state))**2)
 
-        fidelity = np.abs(np.dot(fin_state_exact, self.gs_state))**2
+        fidelity_tot = np.sum(fidelities)
 
-        return fidelity
+        return fidelity_tot
 
 
 
