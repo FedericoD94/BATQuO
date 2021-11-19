@@ -6,8 +6,8 @@ import random
 import numpy as np
 
 # QUANTUM
-from qiskit import Aer, QuantumCircuit, execute
-from qutip import *
+#from qiskit import Aer, QuantumCircuit, execute
+import qutip as qu
 from  utils.default_params import *
 
 # VIZ
@@ -19,10 +19,63 @@ class qaoa_qiskit(object):
     def __init__(self, G):
         self.G = G
         self.N = len(G)
+        L =  self.N
         self.G_comp = nx.complement(G)
         self.gs_states = None
         self.gs_en = None
         self.deg = None
+
+        dimQ = 2
+
+        self.Id = qu.tensor([qu.qeye(dimQ)] * L)
+
+        temp = [[qu.qeye(dimQ)] * j +
+                [qu.sigmax()] +
+                [qu.qeye(dimQ)] * (L - j - 1)
+                for j in range(L)
+                ]
+
+        self.X = [qu.tensor(temp[j]) for j in range(L)]
+
+        temp = [[qu.qeye(dimQ)] * j +
+                [qu.sigmay()] +
+                [qu.qeye(dimQ)] * (L - j - 1)
+                for j in range(L)
+                ]
+        self.Y = [qu.tensor(temp[j]) for j in range(L)]
+
+        temp = [[qu.qeye(dimQ)] * j +
+                [qu.sigmaz()] +
+                [qu.qeye(dimQ)] * (L - j - 1)
+                for j in range(L)
+                ]
+        self.Z = [qu.tensor(temp[j]) for j in range(L)]
+
+
+
+        self.H_c = self.hamiltonian_cost(penalty=DEFAULT_PARAMS["penalty"])
+
+    def Rx(self, qubit_n, alpha):
+        op = np.cos(alpha / 2) * self.Id -1j * np.sin(alpha / 2) * self.X[qubit_n]
+        return op
+
+
+    def Rz(self, qubit_n, alpha):
+        op = np.cos(alpha / 2) * self.Id -1j * np.sin(alpha / 2) * self.Z[qubit_n]
+        return qu.tensor(temp)
+
+
+    def Rzz(self, qubit_n, qubit_m, alpha):
+        op = (np.cos(alpha / 2) * self.Id
+              -1j * np.sin(alpha / 2) * self.Z[qubit_n] * self.Z[qubit_m])
+        return op
+
+
+    def Rxx(self, qubit_n, qubit_m, alpha):
+        op = (np.cos(alpha / 2) * self.Id
+              -1j * np.sin(alpha / 2) * self.X[qubit_n] * self.X[qubit_m])
+        return op
+
 
     def s2z(self, configuration):
         return [1 - 2 * s for s in configuration]
@@ -46,70 +99,23 @@ class qaoa_qiskit(object):
                 list_conf.append(int(x))
         return list_conf
 
-    def evaluate_cost(self,
-                      configuration,
-                      penalty=DEFAULT_PARAMS["penalty"],
-                      basis=None):
+    def hamiltonian_cost(self, penalty):
+        H_0 = [-1*self.Z[i] / 2 for i in range(self.N)]
+        H_int = [(Z[i] * Z[j] - Z[i] - Z[j]) / 4 for i, j in  self.G.edges]
+        ## Hamiltonian_cost is minimized by qaoa so we need to consider -H_0
+        # in order to have a solution labeled by a string of 1s
+        H_c = -sum(H_0) + penalty * sum(H_int)
+        return H_c
+
+
+    def evaluate_cost(self, configuration):
         '''
-        configuration: eigenvalues
+        configuration: strings of 0,1. The solution (minimum of H_c) is labelled by 1
         '''
-        cost = 0
-        if basis == "S":
-            cost = -sum(configuration)
-            for edge in self.G.edges:
-                cost += penalty*(configuration[edge[0]]*configuration[edge[1]])
-        elif basis == "Z":
-            # cost = -(len(configuration) - sum(configuration))/2
-            cost = sum(configuration)/2
-            for edge in self.G.edges:
-            # cost += penalty/4*(1-configuration[edge[0]])*(1-configuration[edge[1]])
-                cost += penalty/4*(configuration[edge[0]] * configuration[edge[1]]
-                                   - configuration[edge[0]]
-                                   - configuration[edge[1]])
-        else:
-            raise ValueError('Basis should be specified: it must be one of ["S","Z"]')
+        qstate_from_configuration = qu.tensor([qu.basis(2, _) for _ in configuration])
+        cost = qu.expect(self.H_c, qstate_from_configuration)
+
         return cost
-
-
-    def classical_solution(self, basis=None, show=False):
-        '''
-        Runs through all 2^n possible configurations and estimates how many max cliques there are and plots one
-        '''
-        results = {}
-
-        if basis=="S":
-            eigenvalues = s_eigenvalues #[0, 1] i.e. eigenvalues for |0> ad |1> respectively
-        elif basis=="Z":
-            eigenvalues = s2z(s_eigenvalues) #[1,-1] i.e. eigenvalues for |0> ad |1> respectively
-        else:
-            raise ValueError('Basis should be specified: it must one of ["S","Z"]')
-
-        eigen_configurations = list(product(eigenvalues, repeat=len(self.G)))
-        for eigen_configuration in eigen_configurations:
-            results[eigen_configuration] = self.evaluate_cost(eigen_configuration, basis=basis)
-
-        sol = pd.DataFrame(np.unique(list(results.values()), return_counts = True)).T
-        sol.columns=["energy","occurrencies"]
-        sol["frequency"]=round(sol["occurrencies"]/sol["occurrencies"].sum()*100,0)
-        if show:
-            print('All possible solutions: \n')
-            print(sol)
-        d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
-        return d
-
-        if show:
-            fig = plt.subplot(1, 2, 1)
-            val, counts = np.unique(list(results.values()), return_counts = True)
-            plt.bar(val, counts)
-            plt.xlabel('Energy')
-            plt.ylabel('Counts')
-            plt.title('Statistics of solutions')
-
-            fig = plt.subplot(1, 2, 2)
-            plt.title('MaxClique')
-            colors = list(d.keys())[0]
-            pos = nx.circular_layout(self.G)
-            nx.draw_networkx(self.G, node_color=colors, node_size=200, alpha=1, pos=pos)
 
 
     def quantum_algorithm(self,
@@ -361,7 +367,7 @@ class qaoa_qiskit(object):
                 op_list_i.append(qeye(2))
 
             op_list_i[qubit] = op
-            op_list.append(tensor(op_list_i))
+            op_list.append(qu.tensor(op_list_i))
 
         return op_list
 
