@@ -51,31 +51,32 @@ class qaoa_qiskit(object):
                 ]
         self.Z = [qu.tensor(temp[j]) for j in range(L)]
 
-
-
         self.H_c = self.hamiltonian_cost(penalty=DEFAULT_PARAMS["penalty"])
 
     def Rx(self, qubit_n, alpha):
-        op = np.cos(alpha / 2) * self.Id -1j * np.sin(alpha / 2) * self.X[qubit_n]
+        op = np.cos(alpha) * self.Id -1j * np.sin(alpha) * self.X[qubit_n]
         return op
 
 
     def Rz(self, qubit_n, alpha):
-        op = np.cos(alpha / 2) * self.Id -1j * np.sin(alpha / 2) * self.Z[qubit_n]
+        op = np.cos(alpha) * self.Id -1j * np.sin(alpha) * self.Z[qubit_n]
         return qu.tensor(temp)
 
 
     def Rzz(self, qubit_n, qubit_m, alpha):
-        op = (np.cos(alpha / 2) * self.Id
-              -1j * np.sin(alpha / 2) * self.Z[qubit_n] * self.Z[qubit_m])
+        op = (np.cos(alpha) * self.Id
+              -1j * np.sin(alpha) * self.Z[qubit_n] * self.Z[qubit_m])
         return op
 
 
     def Rxx(self, qubit_n, qubit_m, alpha):
-        op = (np.cos(alpha / 2) * self.Id
-              -1j * np.sin(alpha / 2) * self.X[qubit_n] * self.X[qubit_m])
+        op = (np.cos(alpha) * self.Id
+              -1j * np.sin(alpha) * self.X[qubit_n] * self.X[qubit_m])
         return op
 
+
+    def U_c(self, alpha):
+        # evolution operator of U_c
 
     def s2z(self, configuration):
         return [1 - 2 * s for s in configuration]
