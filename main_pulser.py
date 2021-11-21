@@ -56,7 +56,6 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
 X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, depth, param_range, return_variance = True)
-print(X_train)
 gp.fit(X_train, y_train)
 
 data = [[i] + x + [y_train[i], 
@@ -69,8 +68,8 @@ data = [[i] + x + [y_train[i],
                     ] for i, x in enumerate(X_train)]
                     
 init_pos = [0.2, 0.2]*depth
+format = '%3d ' + 2*depth*'%5d ' + (len(data[0]) - 1 - 2*depth)*'%.4f '
 
-format = '%d ' + 2*depth*'%4d ' + (len(data[0]) - 1 - 2*depth)*'%.4f '
 np.savetxt(file_name, data, fmt = format)
 
 print('Training ...')
@@ -86,7 +85,6 @@ for i in range(Nbayes):
     fid_sampled = qaoa.fidelity_gs_sampled(next_point)
     sol_ratio = qaoa.solution_ratio(next_point)
     corr_length = gp.kernel_.get_params()['k1__length_scale']
-    print(corr_length)    
     if np.abs(np.log(np.abs(0.01-corr_length))) > 8:
         if i == 0:
             print(data[-9])
@@ -107,10 +105,9 @@ for i in range(Nbayes):
     new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, sol_ratio, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]     
-      
+
     data.append(new_data)
     print(data)
-    format = '%d ' + 2*depth*'%5d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
 
     np.savetxt(file_name, data, fmt = format)
      

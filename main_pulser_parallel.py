@@ -22,8 +22,7 @@ param_range = [100, 3000]   # extremes where to search for the values of gamma a
 quantum_noise = 0
 
 
-file_name = 'pulserp={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
-
+file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 data = []
 global_time = time.time()
 results_structure = ['iter ', 'point ', 'energy ', 'variance', 'fidelity exact', 'fidelity sampled', 'ratio', 'corr_length ', 'const kernel ',
@@ -64,8 +63,7 @@ data = [[i] + x + [y_train[i],
                     ] for i, x in enumerate(X_train)]
                     
 init_pos = [0.2, 0.2]*depth
-
-format = '%d ' + 2*depth*'%4d ' + (len(data[0]) - 1 - 2*depth)*'%.4f '
+format = '%3d ' + 2*depth*'%5d ' + (len(data[0]) - 1 - 2*depth)*'%.4f '
 np.savetxt(file_name, data, fmt = format)
 
 print('Training ...')
@@ -105,7 +103,6 @@ for i in range(Nbayes):
       
     data.append(new_data)
     print(data)
-    format = '%d ' + 2*depth*'%5d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
 
     np.savetxt(file_name, data, fmt = format)
      
