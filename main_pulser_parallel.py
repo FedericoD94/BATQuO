@@ -14,7 +14,7 @@ Ntot = 1000
 
 ### PARAMETERS
 #depth = int(sys.argv[1])
-depth = 2
+depth = 8
 Nwarmup = 20
 Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
@@ -22,7 +22,7 @@ param_range = [100, 3000]   # extremes where to search for the values of gamma a
 quantum_noise = 0
 
 
-file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'pulserp={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
 global_time = time.time()
