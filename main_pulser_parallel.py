@@ -15,13 +15,13 @@ Ntot = 1000
 ### PARAMETERS
 depth = int(sys.argv[1])
 Nwarmup = 20
-Nbayes = Ntot-Nwarmup
+Nbayes = Ntot-Nbayes
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 quantum_noise = 0
 
 
-file_name = 'pulser_1000_run/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'pulse_1000_run/p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
 global_time = time.time()
@@ -35,19 +35,6 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-'''
-#x = [3000,  100, 2969 , 100, 2137, 1528,  100, 2496]
-x = [3000,  100,  100, 2353]
-C = qaoa.get_sampled_state(x)
-print(C)
-N = 1000
-en = []
-for i in range(N):
- en.append(qaoa.expected_energy(x))
-print(np.average(en), np.std(en))
-
-exit()
-'''
 ### INITIAL RANDOM POINTS
 X_train = []   #data
 y_train = []   #label
@@ -100,12 +87,10 @@ for i in range(Nbayes):
             gp.kernel_.set_params(**{'k1__length_scale': data[-9]})
             corr_length = data[-9]
         else:
-            print('La corr e: ', corr_length, ' quindi prendo ', new_data[-9])
             print(data[-9])
             gp.kernel_.set_params(**{'k1__length_scale': new_data[-9]})
             corr_length = new_data[-9]
-            print('infatti ora la corr e: ', gp.kernel_.get_params()['k1__length_scale']
-)
+
     constant_kernel = gp.kernel_.get_params()['k2__constant_value']
 
 
@@ -115,9 +100,11 @@ for i in range(Nbayes):
     
     new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, sol_ratio, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
-                                    bayes_time, qaoa_time, kernel_time, step_time]                    
+                                    bayes_time, qaoa_time, kernel_time, step_time]     
+      
     data.append(new_data)
-    format = '%d ' + 2*depth*'%4d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
+    print(data)
+    format = '%d ' + 2*depth*'%5d ' + (len(new_data) - 1 - 2*depth)*'%.4f '
 
     np.savetxt(file_name, data, fmt = format)
      
