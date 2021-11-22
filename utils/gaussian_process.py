@@ -307,7 +307,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         plt.title('ACQ F iter:{} kernel_{}'.format(len(self.X), self.kernel_))
 
         if save:
-            plt.savefig('../data/raw/gp_LS_iter_{}_kernel_{}.png'.format(len(self.X), self.kernel_))
+            plt.savefig('acq_fun.png'.format(len(self.X), self.kernel_))
         if show:
             plt.show()
 

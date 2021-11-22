@@ -14,7 +14,7 @@ from scipy.stats import qmc
 
 class qaoa_pulser(object):
 
-    def __init__(self, pos, noise = False):
+    def __init__(self, pos, state_prep_noise = 0):
         self.omega = 1.
         self.delta = 1.
         self.U = 10
@@ -26,7 +26,7 @@ class qaoa_pulser(object):
         self.deg = None
         self.qubits_dict = dict(enumerate(pos))
         self.reg = Register(self.qubits_dict)
-        self.quantum_noise = noise
+        self.state_prep_noise = state_prep_noise
 
     def classical_solution(self):
         '''
@@ -79,8 +79,8 @@ class qaoa_pulser(object):
     
     def quantum_loop(self, param):
         sim = self.create_quantum_circuit(param)
-        if self.quantum_noise:
-            cfg = SimConfig(noise=('SPAM', 'dephasing', 'doppler'))
+        if self.state_prep_noise:
+            cfg = SimConfig(noise=('SPAM'), eta = self.state_prep_noise, epsilon = 0, epsilon_prime = 0)
             sim.add_config(cfg)
         results = sim.run()
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots']) #sample from the state vector
@@ -92,8 +92,9 @@ class qaoa_pulser(object):
         for key in self.solution.keys():
             val = ''.join(str(key[i]) for i in range(len(key)))
             color_dict[val] = 'r'
-        plt.figure(figsize=(12,6))
+        plt.figure(figsize=(10,6))
         plt.xlabel("bitstrings")
+        #plt.xticks(size = 15)
         plt.ylabel("counts")
         plt.bar(C.keys(), C.values(), width=0.5, color = color_dict.values())
         plt.xticks(rotation='vertical')
