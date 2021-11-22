@@ -22,7 +22,6 @@ def create_random_graph(num_nodes, average_connectivity, draw=False):
         data_graph = json_graph.node_link_data(H)
         out_file = open(draw + ".json", "w")
         json_object = json.dump(data_graph, out_file)
-        print(json_object)
         out_file.close()
 
     return G
