@@ -16,7 +16,7 @@ from utils.default_params import *
 
 class qaoa_qutip(object):
 
-    def __init__(self, G):
+    def __init__(self, G, problem="MIS"):
         self.G = G
         self.N = len(G)
         L =  self.N
@@ -52,12 +52,23 @@ class qaoa_qutip(object):
         self.Z = [qu.tensor(temp[j]) for j in range(L)]
 
         self.Had = [(self.X[j] + self.Z[j]) / np.sqrt(2) for j in range(L)]
-        H_c, gs_states, gs_en, deg = self.hamiltonian_cost(penalty=DEFAULT_PARAMS["penalty"])
+
+        H_c, gs_states, gs_en, deg = self.hamiltonian_cost(problem=problem, penalty=DEFAULT_PARAMS["penalty"])
 
         self.H_c = H_c
         self.gs_states = gs_states
         self.gs_en = gs_en
         self.deg = deg
+
+        self.gs_binary = self.binary_gs(gs_states)
+
+
+    def binary_gs(self, gs_states):
+        gs_binary = []
+        for gs in gs_states:
+            pos = np.where(np.real(gs.full()))[0][0]
+            gs_binary.append(np.binary_repr(pos, width=self.N))
+        return gs_binary
 
 
     def Rx(self, qubit_n, alpha):
@@ -124,19 +135,34 @@ class qaoa_qutip(object):
                 list_conf.append(int(x))
         return list_conf
 
-    def hamiltonian_cost(self, penalty):
-        H_0 = [-1*self.Z[i] / 2 for i in range(self.N)]
-        H_int = [(self.Z[i] * self.Z[j] - self.Z[i] - self.Z[j]) / 4 for i, j in  self.G.edges]
-        ## Hamiltonian_cost is minimized by qaoa so we need to consider -H_0
-        # in order to have a solution labeled by a string of 1s
-        H_c = -sum(H_0) + penalty * sum(H_int)
-        energies, eigenstates = H_c.eigenstates(sort = 'low')
 
-        degeneracy = next((i for i, x in enumerate(np.diff(energies)) if x), 1) + 1
-        deg = (degeneracy > 1)
-        gs_en = energies[0]
-        gs_states = [state_gs  for state_gs in eigenstates[:degeneracy]]
+    def hamiltonian_cost(self, problem, penalty):
+        if problem == "MIS":
+            H_0 = [-1*self.Z[i] / 2 for i in range(self.N)]
+            H_int = [(self.Z[i] * self.Z[j] - self.Z[i] - self.Z[j]) / 4 for i, j in  self.G.edges]
+            ## Hamiltonian_cost is minimized by qaoa so we need to consider -H_0
+            # in order to have a solution labeled by a string of 1s
+            H_c = -sum(H_0) + penalty * sum(H_int)
+            energies, eigenstates = H_c.eigenstates(sort = 'low')
 
+            degeneracy = next((i for i, x in enumerate(np.diff(energies)) if x), 1) + 1
+            deg = (degeneracy > 1)
+            gs_en = energies[0]
+            gs_states = [state_gs for state_gs in eigenstates[:degeneracy]]
+
+        elif problem == "MAX-CUT":
+            H_int = [(self.Id - self.Z[i] * self.Z[j]) / 2 for i, j in  self.G.edges]
+            H_c = -1 * sum(H_int)
+            energies, eigenstates = H_c.eigenstates(sort = 'low')
+
+            degeneracy = next((i for i, x in enumerate(np.diff(energies)) if x), 1) + 1
+            deg = (degeneracy > 1)
+            gs_en = energies[0]
+            gs_states = [state_gs for state_gs in eigenstates[:degeneracy]]
+
+        else:
+            print("problem sohuld be one of the following: MIS, MAX-CUT")
+            exit(-1)
         return H_c, gs_states, gs_en, deg
 
 
