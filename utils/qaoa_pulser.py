@@ -15,9 +15,10 @@ from scipy.stats import qmc
 class qaoa_pulser(object):
 
     def __init__(self, depth, param_range, pos, state_prep_noise = 0):
+        self.C_6_over_h = 5008713.0  #copied from Pulser/pulser/devices/_device_datacls.py / on github
         self.omega = 1.
         self.delta = 1.
-        self.U = 10
+        self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
         self.depth = depth
         self.param_range = param_range
         self.G = self.pos_to_graph(pos)
@@ -29,6 +30,7 @@ class qaoa_pulser(object):
         self.qubits_dict = dict(enumerate(pos))
         self.reg = Register(self.qubits_dict)
         self.state_prep_noise = state_prep_noise
+        
 
     def get_info(self):
         '''
@@ -78,6 +80,7 @@ class qaoa_pulser(object):
                 distances.append(pwd)
                 if pwd < d:
                     edges.append([n,m]) # Below rbr, vertices are connected
+                    self.U.append(self.C_6_over_h/(pwd**6)) #And the interaction is given by C_6/(h*d^6)
         G.add_nodes_from(range(len(pos)))
         G.add_edges_from(edges)
         return G
@@ -128,7 +131,7 @@ class qaoa_pulser(object):
             H += self.omega * sx_list[n]
             H -= self.delta * ni_list[n]
         for i, edge in enumerate(self.G.edges):
-            H +=  self.U*ni_list[edge[0]]*ni_list[edge[1]]
+            H +=  self.U[i]*ni_list[edge[0]]*ni_list[edge[1]]
         energies, eigenstates = H.eigenstates(sort = 'low')
         _, degeneracies = np.unique(energies, return_counts = True)
         degeneracy = degeneracies[0]
@@ -314,7 +317,7 @@ class qaoa_pulser(object):
 
     def get_cost_string(self, string):
         'Receives a string of 0 and 1s and gives back its cost to the MIS hamiltonian'
-        penalty = self.U
+        penalty = DEFAULT_PARAMS["penalty"]
         configuration = np.array(tuple(string),dtype=int)
         
         cost = 0
@@ -371,6 +374,7 @@ class qaoa_pulser(object):
         
     def expected_energy(self, param):
         C, _ = self.quantum_loop(param)
+        print(C)
         cost = self.get_cost_dict(C)
         
         return cost

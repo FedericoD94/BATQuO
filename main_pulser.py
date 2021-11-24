@@ -16,8 +16,8 @@ Nwarmup = 3
 Nbayes = 100
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
-eta = 0.00
 global_time = time.time()
+eta = 0
 
 ### CREATE GRAPH AND QAOA INSTANCE
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -25,6 +25,7 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
                
 qaoa = qaoa_pulser(depth, param_range, pos, eta)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
+
 
 
 ### CREATE GP 
