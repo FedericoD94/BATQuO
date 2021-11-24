@@ -14,10 +14,12 @@ from scipy.stats import qmc
 
 class qaoa_pulser(object):
 
-    def __init__(self, pos, state_prep_noise = 0):
+    def __init__(self, depth, param_range, pos, state_prep_noise = 0):
         self.omega = 1.
         self.delta = 1.
         self.U = 10
+        self.depth = depth
+        self.param_range = param_range
         self.G = self.pos_to_graph(pos)
         self.solution = self.classical_solution()
         self.Nqubit = len(self.G)
@@ -28,9 +30,26 @@ class qaoa_pulser(object):
         self.reg = Register(self.qubits_dict)
         self.state_prep_noise = state_prep_noise
 
+    def pulser_info(self):
+        '''
+        Returns a dictionary of infos on the qaoa to print 
+        '''
+        info  ={}
+        info['depth'] = self.depth
+        info['omega'] = self.omega
+        info['delta'] = self.delta
+        info['U'] = self.U
+        info['Nqubits'] = self.Nqubit
+        info['graph'] = self.G
+        info['classical sol'] = self.solution
+        info['quantum noise'] = self.state_prep_noise
+        
+        return info
+        
     def classical_solution(self):
         '''
         Runs through all 2^n possible configurations and estimates the solution
+        Returns: dictionary with {[bitstring solution] : energy}
         '''
         results = {}
 
@@ -43,7 +62,12 @@ class qaoa_pulser(object):
         d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
         return d
             
-    def pos_to_graph(self, pos): #d is the rbr
+    def pos_to_graph(self, pos): 
+        '''
+        Creates a networkx graph from the relative positions between qubits
+        Parameters: positions of qubits in micrometers
+        Returns: networkx graph G
+        '''
         d = Chadoq2.rydberg_blockade_radius(self.omega)
         G = nx.Graph()
         edges=[]
@@ -58,6 +82,97 @@ class qaoa_pulser(object):
         G.add_edges_from(edges)
         return G
         
+    def list_operator(self, op):
+        '''Returns a a list of tensor products with op on site 0, 1, 2 ...
+        
+        Attributes
+        ---------
+        op: single qubit operator
+        
+        Returns
+        -------
+        op_list: list. Each entry is the tensor product of I on every site except operator op
+                       on the position of the entry
+        '''
+        op_list = []
+    
+        for n in range(self.Nqubit):
+            op_list_i = []
+            for m in range(self.Nqubit):
+                op_list_i.append(qeye(2))
+       
+            op_list_i[n] = op
+            op_list.append(tensor(op_list_i)) 
+    
+        return op_list
+    
+    def calculate_physical_gs(self):
+        '''Calculate groundstate state, energy and degeneracy
+        
+        Returns
+        -------
+        gs_en: energy of gs
+        gs_state: array 
+        deg: either 0 if no degeneracy or a number indicating the degeneracy
+        '''
+
+        ## Defining lists of tensor operators 
+        ni = (qeye(2) - sigmaz())/2
+
+        sx_list = self.list_operator(sigmax())
+        sz_list = self.list_operator(sigmaz())
+        ni_list = self.list_operator(ni)
+    
+        H=0
+        for n in range(self.Nqubit):
+            H += self.omega * sx_list[n]
+            H -= self.delta * ni_list[n]
+        for i, edge in enumerate(self.G.edges):
+            H +=  self.U*ni_list[edge[0]]*ni_list[edge[1]]
+        energies, eigenstates = H.eigenstates(sort = 'low')
+        _, degeneracies = np.unique(energies, return_counts = True)
+        degeneracy = degeneracies[0]
+        
+        gs_en = energies[0]
+        if degeneracy > 1:
+            deg = degeneracy
+            gs_state = eigenstates[:degeneracy]
+        else:
+            deg = degeneracy - 1
+            gs_state = eigenstates[0]
+            gs_state = np.squeeze(gs_state.full())
+
+        self.gs_state = gs_state
+        self.gs_en = gs_en
+        self.deg = deg
+    
+        return gs_en, gs_state, deg
+        
+    def generate_random_points(self, N_points, return_variance = True):
+        ''' Generates N_points random points with the latin hypercube method
+        
+        Attributes:
+        N_points: how many points to generate
+        return_variance: bool, if to calculate the variance or not
+        '''
+        X , Y , VAR = [], [], []
+        
+        hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = DEFAULT_PARAMS['seed'])
+        X =  hypercube_sampler.random(N_points)
+        l_bounds = np.repeat(self.param_range[0], 2*self.depth)
+        u_bounds = np.repeat(self.param_range[1], 2*self.depth)
+        X = qmc.scale(X, l_bounds, u_bounds).astype(int)
+        X = X.tolist()
+        for x in X:
+            y, var_y = self.expected_energy_and_variance(x)
+            Y.append(y)
+            if return_variance:
+                VAR.append(var_y)
+        
+        if return_variance:
+            return X, Y, VAR
+        else:
+            return X, Y
 
     def create_quantum_circuit(self, params):
         seq = Sequence(self.reg, Chadoq2)
@@ -100,24 +215,7 @@ class qaoa_pulser(object):
         plt.xticks(rotation='vertical')
         plt.show()
     
-    def list_operator(self, op):
-        ''''
-        returns a a list of tensor products with op on site 0, 1,2 ...
-        '''
-        op_list = []
-    
-        for n in range(self.Nqubit):
-            op_list_i = []
-            for m in range(self.Nqubit):
-                op_list_i.append(qeye(2))
-       
-            op_list_i[n] = op
-            op_list.append(tensor(op_list_i)) 
-    
-        return op_list
-    
     def plot_landscape(self,
-                param_range,
                 fixed_params = None,
                 num_grid=DEFAULT_PARAMS["num_grid"],
                 save = False):
@@ -126,7 +224,7 @@ class qaoa_pulser(object):
         the fixed_params argument
         '''
 
-        lin = np.linspace(param_range[0],param_range[1], num_grid)
+        lin = np.linspace(self.param_range[0],self.param_range[1], num_grid)
         Q = np.zeros((num_grid, num_grid))
         Q_params = np.zeros((num_grid, num_grid, 2))
         for i, gamma in enumerate(lin):
@@ -139,7 +237,7 @@ class qaoa_pulser(object):
                 Q_params[j,i] = np.array([gamma, beta])
 
 
-        plt.imshow(Q, origin = 'lower', extent = [param_range[0],param_range[1],param_range[0],param_range[1]])
+        plt.imshow(Q, origin = 'lower', extent = [self.param_range[0],self.param_range[1],self.param_range[0],self.param_range[1]])
         plt.title('Grid Search: [{} x {}]'.format(num_grid, num_grid))
         plt.xticks(fontsize = 15)
         plt.yticks(fontsize = 15)
@@ -153,63 +251,6 @@ class qaoa_pulser(object):
         if save:
             np.savetxt('../data/raw/graph_Grid_search_{}x{}.dat'.format(num_grid, num_grid), Q)
             np.savetxt('../data/raw/graph_Grid_search_{}x{}_params.dat'.format(num_grid, num_grid), Q)
-            
-            
-    def calculate_physical_gs(self):
-        '''
-        returns groundstate and energy 
-        '''
-
-        ## Defining lists of tensor operators 
-        ni = (qeye(2) - sigmaz())/2
-
-        sx_list = self.list_operator(sigmax())
-        sz_list = self.list_operator(sigmaz())
-        ni_list = self.list_operator(ni)
-    
-        H=0
-        for n in range(self.Nqubit):
-            H += self.omega * sx_list[n]
-            H -= self.delta * ni_list[n]
-        for i, edge in enumerate(self.G.edges):
-            H +=  self.U*ni_list[edge[0]]*ni_list[edge[1]]
-        energies, eigenstates = H.eigenstates(sort = 'low')
-        if energies[0] ==  energies[1]:
-            print('DEGENERATE GROUND STATE')
-            self.deg = True
-            self.gs_en = energies[:2]
-            self.gs_state = eigenstates[:2]
-        else:
-            self.deg = False
-            self.gs_en = energies[0]
-            self.gs_state = eigenstates[0]
-    
-        return self.gs_en, self.gs_state, self.deg
-
-            
-    def generate_random_points(self, N_points, depth, extreme_params, return_variance = True):
-        X = []
-        Y = []
-        VAR = []
-        np.random.seed(DEFAULT_PARAMS['seed'])
-        random.seed(DEFAULT_PARAMS['seed'])
-        
-        hypercube_sampler = qmc.LatinHypercube(d=depth*2)
-        X =  hypercube_sampler.random(N_points)
-        l_bounds = np.repeat(extreme_params[0], 2*depth)
-        u_bounds = np.repeat(extreme_params[1], 2*depth)
-        X = qmc.scale(X, l_bounds, u_bounds).astype(int)
-        X = X.tolist()
-        for x in X:
-            y, var_y = self.expected_energy_and_variance(x)
-            Y.append(y)
-            if return_variance:
-                VAR.append(var_y)
-        
-        if return_variance:
-            return X, Y, VAR
-        else:
-            return X, Y
 
     def fidelity_gs_sampled(self, x, solution_ratio = False):
         '''
@@ -243,16 +284,33 @@ class qaoa_pulser(object):
             
         return sol_ratio
         
+    def fidelity_gs_exact_old(self, param):
+        '''
+        Return the fidelity of the exact qaoa state (obtained with qutip) and the 
+        exact groundstate calculated with the physical hamiltonian of pulser
+        '''
+        C, evolution_states = self.quantum_loop(param)
+        if self.gs_state is None:
+            self.calculate_physical_gs()
+        fid = fidelity(self.gs_state, evolution_states[-1])
+        return fid
+        
+
     def fidelity_gs_exact(self, param):
         '''
         Return the fidelity of the exact qaoa state (obtained with qutip) and the 
         exact groundstate calculated with the physical hamiltonian of pulser
         '''
         C, evolution_states = self.quantum_loop(param)
-        if self.gs_state == None:
+        final_state = np.squeeze(evolution_states[-1])
+        if self.gs_state is None:
             self.calculate_physical_gs()
-        fid = fidelity(self.gs_state, evolution_states[-1])
-        return fid
+        if self.deg:
+            fidelities = [np.abs(np.dot(final_state, self.gs_state[i]))**2 for i in range(len(self.gs_state))]
+            fidelity = np.sum(fidelities)
+        else:
+            fidelity = np.squeeze(np.abs(np.dot(final_state, self.gs_state))**2)
+        return fidelity
 
     def get_cost_string(self, string):
         'Receives a string of 0 and 1s and gives back its cost to the MIS hamiltonian'

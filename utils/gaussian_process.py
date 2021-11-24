@@ -25,12 +25,28 @@ from sklearn.exceptions import ConvergenceWarning
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
     def __init__(self, param_range, gtol, max_iter, *args, **kwargs):
+        '''Initializes gaussian process class
+        
+        The class also inherits from Sklearn GaussianProcessRegressor
+        Attributes for MYgp
+        --------
+        param_range : range of the angles beta and gamma
+        
+        gtol: tolerance of convergence for the optimization of the kernel parameters
+        
+        max_iter: maximum number of iterations for the optimization of the kernel params
+        
+        Attributes for SKlearn GP:
+        ---------
+        
+        *args, **kwargs: kernel, optimizer_kernel, 
+                         n_restarts_optimizer (how many times the kernel opt is performed)
+                         normalize_y: standard is yes
+        '''
         alpha = 1/np.sqrt(DEFAULT_PARAMS['shots'])
-        print(*args)
-        print(kwargs)
         super().__init__(alpha = alpha, *args, **kwargs)
-        self._max_iter = max_iter
-        self._gtol = gtol
+        self.max_iter = max_iter
+        self.gtol = gtol
         self.param_range = param_range
         self.X = []
         self.Y = []
@@ -56,8 +72,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                            method="L-BFGS-B",
                                            jac=True,
                                            bounds=bounds,
-                                           options={'maxiter': self._max_iter,
-                                                    'gtol': self._gtol}
+                                           options={'maxiter': self.max_iter,
+                                                    'gtol': self.gtol}
                                            )
             _check_optimize_result("lbfgs", opt_res)
 #            except ConvergenceWarning:
@@ -87,9 +103,20 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return theta_opt, func_min
 
     def fit(self, new_point, y_new_point):
+        '''Fits the GP to the new point(s)
+        
+        Appends the new data to the myGP instance and keeps track of the best X and Y.
+        Then uses the inherited fit method which optimizes the kernel (by maximizing the
+        log marginal likelihood) with kernel_optimizer for 1 + n_restart_optimier_kernel 
+        times and keeps the best value. All points are scaled down to [0,1]*depth.
+        
+        Attributes
+        ---------
+        new_point, y_new_point: either list or a single new point with their/its energy
+        '''
         new_point = self.scale_down(new_point)
 
-        if isinstance(new_point[0], float):
+        if isinstance(new_point[0], float): #check if its only one point
             self.X.append(new_point)
             self.Y.append(y_new_point)
             if y_new_point < self.y_best:
@@ -105,12 +132,16 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                     self.x_best = point
         
         super().fit(self.X, self.Y)
-#        except ConvergenceWarning:
-#            print("AAAA")
-#            exit()
 
     def my_rescaler(self, x, min_old, max_old, min_new, max_new):
-        'Rescales one or more than one point(s) at a time'
+        '''Rescales one or more than one point(s) at a time 
+        
+        Attributes
+        ---------
+        x: point(s)
+        min_old, max_old: the current param range of x
+        min_new, max_new: the next param range of x
+        '''
         norm = []
         if isinstance(x[0], float) or isinstance(x[0], int):
             for i in x:
@@ -122,7 +153,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return norm
 
     def scale_down(self, x):
-        'Rescales one or more than one point(s) at a time'
+        'Rescales a(many) point(s) from param range to [0,1]'
 
         min_old=self.param_range[0]
         max_old=self.param_range[1]
@@ -135,7 +166,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
 
     def scale_up(self, x):
-        'Rescales one or more than one point(s) at a time'
+        'Rescales a(many)point(s) from [0,1] to param range'
 
         min_old=0
         max_old=1
@@ -147,12 +178,20 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return x
 
     def get_best_point(self):
-
+        '''Return the current best point with its energy and position'''
         x_best = self.scale_up(self.x_best)
         where = np.argwhere(self.y_best == np.array(self.Y))
         return x_best, self.y_best, where[0,0]
 
     def acq_func(self, x, *args):
+        '''Expected improvement at point x
+        
+        Arguments
+        ---------
+        x: point of the prediction
+        *args: the sign of the acquisition function (in case you have to minimize -acq fun)
+        
+        '''
         self = args[0]
         try:
             sign = args[1]
@@ -160,22 +199,35 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             sign = 1.0
         if isinstance(x[0], float):
             x = np.reshape(x, (1, -1))
-        f_x, sigma_x = self.predict(x, return_std=True)
+        f_x, sigma_x = self.predict(x, return_std=True) 
 
-        K_xx = sigma_x**2
-        f_prime = self.y_best
-
+        f_prime = self.y_best #current best value
+        
         #Ndtr is a particular routing in scipy that computes the CDF in half the time
-        #cdf = norm.cdf(x = f_prime, loc = f_x , scale = sigma_x)
         cdf = ndtr((f_prime - f_x)/sigma_x)
-        pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x))
-        #pdf = norm.pdf(x = f_prime, loc = f_x , scale = sigma_x)
+        pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x**2))
         alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
-
+        
         return sign*alpha_function
 
-    def bayesian_opt_step(self, init_pos, method = 'FD'):
-        depth = int(len(init_pos)/2)
+    def bayesian_opt_step(self, method = 'DIFF-EVOL', init_pos = None):
+        ''' Performs one step of bayesian optimization
+        
+        It uses the specified method to maximize the acquisition function
+        
+        Attributes
+        ----------
+        method: choice between grid search (not available for depth >1), hamiltonian monte 
+                carlo, finite differences gradient, scipy general optimization, diff evolution
+                
+        Returns (for diff evolution)
+        -------
+        next_point: where to sample next (rescaled to param range)
+        nit: number of iterations of the diff evolution algorithm
+        avg_norm_dist_vect: condition of convergence for the positions 
+        std_pop_energy: condition of convergence for the energies
+        '''
+        depth = int(len(self.X[0])/2)
 
         samples = []
         acqfunvalues = []
@@ -197,14 +249,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             #argmax is a number between 0 and N_test**-1 telling us where is the next point to sample
             argmax = np.argmax(np.round(alpha, 3))
             next_point = X_test[argmax]
-
+            
         if method == 'HMC':
             path_length = .2
             step_size = .02
             epsilon = .001
             epochs = 10
             hmc_samples, traj, success= HMC(func = self.acq_func,
-                                            initial_position = init_pos,
                                             path_len=path_length,
                                             step_size=step_size,
                                             epsilon = epsilon,
@@ -232,6 +283,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         if method == 'FD':
             l_rate = 0.001
+            if init_pos is None:
+                print('You need to pass an initial point if using Finite differences')
+                raise Error
             gd_params = gradient_descent(self.acq_func,
                                         l_rate,
                                         init_pos,
@@ -241,6 +295,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             next_point = gd_params[-1][:2]
 
         if method == 'SCIPY':
+            if init_pos is None:
+                print('You need to pass an initial point if using scipy')
+                raise Error
             results = minimize(self.acq_func,
                                 bounds = [(0,1), (0,1)]*depth,
                                 x0 = init_pos,
@@ -254,17 +311,31 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             maxiter = 100*depth,
                                             popsize = 15,
                                             tol = .001,
-                                            dist_tol = 0.01,
+                                            dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
                                             seed = self.seed,
                                             args = (self, -1)) as diff_evol:
                 results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
-            success = results.success
         next_point = self.scale_up(next_point)
         return next_point, results.nit, average_norm_distance_vectors, std_population_energy
 
+    def covariance_matrix(self):
+        K = self.kernel_(self.X)
+        K[np.diag_indices_from(K)] += self.alpha
+        
+        return K
+        
+    def plot_covariance_matrix(self, show = True, save = False):
+        K = self.covariance_matrix()
+        fig = plt.figure()
+        im = plt.imshow(K, origin = 'upper')
+        plt.colorbar(im)
+        if save:
+            plt.savefig('data/cov_matrix_iter={}.png'.format(len(self.X), self.kernel_))
+        if show:
+             plt.show()
 
-    def plot_landscape(self, show = True, save = False):
+    def plot_posterior_landscape(self, show = True, save = False):
         if len(self.X[0]) > 2:
             raise ValueError(
                         "Non si puo plottare il landscape a p>1"
@@ -286,6 +357,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         plt.colorbar(im)
         plt.colorbar(im2)
         plt.show()
+        
 
     def plot_acquisition_function(self, show = True, save = False):
         if len(self.X[0]) > 2:
@@ -304,10 +376,28 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         plt.scatter(samples[:len(self.X), 0], samples[:len(self.X),1], marker = '+', c = 'g')
         plt.scatter(samples[-1, 0], samples[-1,1], marker = '+', c = 'r')
         plt.colorbar(im)
-        plt.title('ACQ F iter:{} kernel_{}'.format(len(self.X), self.kernel_))
+        plt.title('data/ACQ F iter:{} kernel_{}'.format(len(self.X), self.kernel_))
 
         if save:
-            plt.savefig('acq_fun.png'.format(len(self.X), self.kernel_))
+            plt.savefig('data/acq_fun_iter={}.png'.format(len(self.X), self.kernel_))
+        if show:
+            plt.show()
+            
+    def plot_log_marginal_likelihood(self, show = True, save = False):
+        fig = plt.figure()
+        num = 50
+        x = np.zeros((num, num))
+        for i in range(num):
+            for j in range(num):
+                x[j, i] = self.log_marginal_likelihood([i/num*2,j/num*2])
+        im = plt.imshow(x, extent = [0,2,0,2], origin = 'lower')
+        plt.xlabel('Corr length')
+        plt.ylabel('Constant')
+        plt.colorbar(im)
+        plt.title('log_marg_likelihood iter:{} kernel_{}'.format(len(self.X), self.kernel_))
+
+        if save:
+            plt.savefig('data/marg_likelihood_iter={}_kernel={}.png'.format(len(self.X), self.kernel_))
         if show:
             plt.show()
 

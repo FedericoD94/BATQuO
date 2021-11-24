@@ -9,5 +9,7 @@ DEFAULT_PARAMS = {"penalty": 2,
                   "nu" : 1.5,
                   "initial_length_scale" : 1,
                   "max_iter_lfbgs": 50000,
-                  "optimizer_kernel": 'fmin_l_bfgs_b'
+                  "optimizer_kernel": 'fmin_l_bfgs_b',
+                  "n_restart_kernel_optimizer":0,
+                  "distance_conv_tol": 0.01
                   }

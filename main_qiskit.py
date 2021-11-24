@@ -7,7 +7,8 @@ import json
 import time
 
 np.set_printoptions(precision = 4, suppress = True)
-
+np.random.seed(DEFAULT_PARAMS['seed'])
+random.seed(DEFAULT_PARAMS['seed'])
 ### PARAMETERS
 depth = 1
 Nwarmup = 10

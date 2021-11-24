@@ -264,7 +264,7 @@ class qaoa_qiskit(object):
         np.random.seed(DEFAULT_PARAMS['seed'])
         random.seed(DEFAULT_PARAMS['seed'])
         
-        hypercube_sampler = qmc.LatinHypercube(d=depth*2)
+        hypercube_sampler = qmc.LatinHypercube(d=depth*2,  seed = DEFAULT_PARAMS['seed'])
         X =  hypercube_sampler.random(N_points)
         l_bounds = np.repeat(extreme_params[0], 2*depth)
         u_bounds = np.repeat(extreme_params[1], 2*depth)
