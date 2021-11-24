@@ -53,6 +53,23 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         self.x_best = 0
         self.y_best = np.inf
         self.seed = DEFAULT_PARAMS["seed"]
+        
+    def get_info(self):
+        '''
+        Returns a dictionary of infos on the  gp to print 
+        '''
+        info ={}
+        info['param_range'] = self.param_range
+        info['acq_fun_optimization_max_iter'] = self.max_iter
+        info['seed'] = self.seed
+        info['gtol'] = self.gtol
+        info['alpha'] = self.alpha
+        info['kernel_optimizer'] = self.optimizer
+        info['kernel_info'] = self.kernel.get_params()
+        info['n_restart_kernel_optimizer'] = self.n_restarts_optimizer
+        info['normalize_y'] = self.normalize_y
+        
+        return info
 
     def _constrained_optimization(self,
                                   obj_func,

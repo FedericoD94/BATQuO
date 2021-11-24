@@ -17,18 +17,7 @@ Nbayes = 100
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 eta = 0.00
-
-file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
-data = []
-
 global_time = time.time()
-gamma_names = " ".join(['GAMMA' + str(i) for i in range(depth)])
-beta_names = " ".join(['BETA' + str(i) for i in range(depth)])
-
-data_names = ['iter', gamma_names, beta_names, 'energy', 'variance', 'fidelity_exact', 'fidelity_sampled', 'ratio', 'corr_length ', 'const_kernel',
-                    'std energies', 'average distances', 'nit', 'time opt bayes', 'time qaoa', 'time opt kernel', 'time step']
-data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
-
 
 ### CREATE GRAPH AND QAOA INSTANCE
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -37,9 +26,6 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(depth, param_range, pos, eta)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-### INITIAL RANDOM POINTS
-X_train = []   #data
-y_train = []   #label
 
 ### CREATE GP 
 kernel =  Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
@@ -54,14 +40,37 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 gtol=1e-06,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
+### DATA SAVING
+file_name = 'p={}_punti={}_warmup={}_train={}'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+data = []
+gamma_names = ['GAMMA' + str(i) + ' ' for i in range(depth)]
+beta_names = ['BETA' + str(i) + ' ' for i in range(depth)]
+data_names = ['iter'] + gamma_names + beta_names +['energy', 'variance', 'fidelity_exact', 'fidelity_sampled', 'ratio', 'corr_length ', 'const_kernel',
+                    'std energies', 'average distances', 'nit', 'time opt bayes', 'time qaoa', 'time opt kernel', 'time step']
+data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
+
+info_file_name = file_name + '_info.txt'
+with open(info_file_name, 'w') as f:
+    f.write('BAYESIAN OPTIMIZATION TRAINING INFO \n\n')
+    f.write('QAOA PARAMETERS\n-------------\n')
+    print(qaoa.get_info(), file = f)
+    f.write('\nGAUSSIAN PROCESS PARAMETERS\n---------------\n')
+    print(gp.get_info(), file = f)
+    f.write('\nBAYESIAN OPT PARAMETERS\n------------------\n')
+    f.write('Depth: {} \nNwarmup points: {} \nNtraining points: {}\n'.format(depth, Nwarmup, Nbayes))
+    f.write('FILE.DAT PARAMETERS:\n')
+    print(data_names, file = f)
+
+
 ###GENERATE AND FIT TRAINING DATA
 X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, return_variance = True)
 gp.fit(X_train, y_train)
 
 
 ### STARTS PLOTTING THE DATA
+data_file_name = file_name + '.dat'
 data = [[i] + x + [y_train[i], 
-					var_train[i],
+                    var_train[i],
                     qaoa.fidelity_gs_exact(x), 
                     qaoa.fidelity_gs_sampled(x),
                     qaoa.solution_ratio(x),
@@ -70,9 +79,7 @@ data = [[i] + x + [y_train[i],
                     ] for i, x in enumerate(X_train)]
                     
 format = '%3d ' + 2*depth*'%6d ' + (len(data[0]) - 1 - 2*depth)*'%4.4f '
-with open(file_name, 'wb') as f:
-  f.write(data_header.encode('ascii'))
-  np.savetxt(f, data, fmt = format)
+np.savetxt(data_file_name, data, fmt = format)
 
 #### BAYESIAN OPTIMIZATION PROCEDURE
 print('Training ...')
@@ -107,17 +114,10 @@ for i in range(Nbayes):
                                     bayes_time, qaoa_time, kernel_time, step_time]     
 
     data.append(new_data)
+    np.savetxt(data_file_name, data, fmt = format)
 
-    with open(file_name, 'wb') as f:
-      f.write(data_header.encode('ascii'))
-      np.savetxt(f, data, fmt = format)
-
-     
 best_x, best_y, where = gp.get_best_point()
 data.append(data[where])
-
-with open(file_name, 'wb') as f:
-      f.write(data_header.encode('ascii'))
-      np.savetxt(f, data, fmt = format)
+np.savetxt(data_file_name, data, fmt = format)
 print('Best point: ' , data[where])
 print('time: ',  time.time() - global_time)

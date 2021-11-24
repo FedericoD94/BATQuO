@@ -30,7 +30,7 @@ class qaoa_pulser(object):
         self.reg = Register(self.qubits_dict)
         self.state_prep_noise = state_prep_noise
 
-    def pulser_info(self):
+    def get_info(self):
         '''
         Returns a dictionary of infos on the qaoa to print 
         '''
@@ -40,7 +40,7 @@ class qaoa_pulser(object):
         info['delta'] = self.delta
         info['U'] = self.U
         info['Nqubits'] = self.Nqubit
-        info['graph'] = self.G
+        info['graph'] = self.G.edges
         info['classical sol'] = self.solution
         info['quantum noise'] = self.state_prep_noise
         
