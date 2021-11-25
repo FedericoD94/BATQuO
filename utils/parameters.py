@@ -25,10 +25,11 @@ def parse_command_line():
     parser.add_argument('--average_connectivity',
                         type=float,
                         default=0.4,
-                        help="Probability of selecting an edge in the random graph"
+                        help="Probability of selecting an"
+                             "edge in the random graph"
                         )
 
-    parser.add_argument('--Nbayes',
+    parser.add_argument('--nbayes',
                         type=int,
                         default=100,
                         help="Number of bayesian optimization steps"
@@ -38,6 +39,18 @@ def parse_command_line():
                         type=float,
                         default=0.1,
                         help="Fraction of warmup points"
+                        )
+
+    parser.add_argument('--nwarmup',
+                        type=int,
+                        default=10,
+                        help="Number of warmup points"
+                        )
+
+    parser.add_argument('--i_trial',
+                        type=int,
+                        default=1,
+                        help="Trial number"
                         )
 
     parser.add_argument('--trials',
