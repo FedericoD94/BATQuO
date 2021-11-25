@@ -59,7 +59,7 @@ class qaoa_pulser(object):
         f.write('Mixing: \u03A9 \u03A3 X_i\n\n')
         f.write('\n')
         
-    def print_info(self, f):
+    def print_info_qaoa(self, f):
         '''Prints the info on the passed opened file f'''
         f.write(f'Depth: {self.depth}\n')
         f.write(f'Omega: {self.omega} ')

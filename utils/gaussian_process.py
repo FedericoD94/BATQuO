@@ -78,9 +78,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         f.write(f'tol opt kernel: {self.gtol}\n')
         f.write(f'energy noise alpha 1/sqrt(N): {self.alpha}\n')
         f.write(f'kernel_optimizer: {self.optimizer}\n')
-        f.write(f'kernel info: {self.kernel.get_params()}')
-        f.write(f'n_restart_kernel_optimizer: {self.n_restarts_optimizer}')
-        f.write(f'normalize_y: {self.normalize_y}')
+        f.write(f'kernel info: {self.kernel.get_params()}\n')
+        f.write(f'n_restart_kernel_optimizer: {self.n_restarts_optimizer}\n')
+        f.write(f'normalize_y: {self.normalize_y}\n')
         f.write('\n')
         
     def _constrained_optimization(self,
