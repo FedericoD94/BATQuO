@@ -52,6 +52,25 @@ class qaoa_pulser(object):
         
         return info
         
+    def print_info_problem(self,f):
+        f.write('Problem: MIS\n')
+        f.write('Cost: -\u03A3 Z_i + {} * \u03A3 Z_i Z_j\n'.format(DEFAULT_PARAMS['penalty']))
+        f.write('Hamiltonian: \u03A9 \u03A3 X_i - \u03b4 \u03A3 Z_i + U \u03A3 Z_i Z_j\n')
+        f.write('Mixing: \u03A9 \u03A3 X_i\n\n')
+        f.write('\n')
+        
+    def print_info(self, f):
+        '''Prints the info on the passed opened file f'''
+        f.write(f'Depth: {self.depth}\n')
+        f.write(f'Omega: {self.omega} ')
+        f.write(f'delta: {self.delta} ')
+        f.write(f'U: {self.U}\n')
+        f.write(f'Graph: {self.G.edges}\n')
+        f.write(f'Classical sol: {self.solution}\n')
+        if self.quantum_noise is not None:
+            f.write(f'Noise info: {self.noise_info}')
+        f.write('\n')
+        
     def classical_solution(self):
         '''
         Runs through all 2^n possible configurations and estimates the solution

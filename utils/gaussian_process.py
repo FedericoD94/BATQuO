@@ -70,7 +70,19 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         info['normalize_y'] = self.normalize_y
         
         return info
-
+        
+    def print_info(self, f):
+        f.write(f'parameters range: {self.param_range}\n')
+        f.write(f'acq_fun_optimization_max_iter: {self.param_range}\n')
+        f.write(f'seed: {self.seed}\n')
+        f.write(f'tol opt kernel: {self.gtol}\n')
+        f.write(f'energy noise alpha 1/sqrt(N): {self.alpha}\n')
+        f.write(f'kernel_optimizer: {self.optimizer}\n')
+        f.write(f'kernel info: {self.kernel.get_params()}')
+        f.write(f'n_restart_kernel_optimizer: {self.n_restarts_optimizer}')
+        f.write(f'normalize_y: {self.normalize_y}')
+        f.write('\n')
+        
     def _constrained_optimization(self,
                                   obj_func,
                                   initial_theta,

@@ -19,7 +19,7 @@ Nbayes = 100
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 global_time = time.time()
-quantum_noise = ('SPAM', 'amplitude') #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one
+quantum_noise = None #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one or None
 
 ### CREATE GRAPH AND QAOA INSTANCE
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -53,16 +53,13 @@ data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
 info_file_name = file_name + '_info.txt'
 with open(info_file_name, 'w') as f:
     f.write('BAYESIAN OPTIMIZATION of QAOA \n\n')
-    f.write('Problem: MIS\n')
-    f.write('Cost: -\u03A3 Z_i + {} * \u03A3 Z_i Z_j\n'.format(DEFAULT_PARAMS['penalty']))
-    f.write('Hamiltonian: \u03A9 \u03A3 X_i - \u03b4 \u03A3 Z_i + U \u03A3 Z_i Z_j\n')
-    f.write('Mixing: \u03A9 \u03A3 X_i\n\n')
+    qaoa.print_info_problem(f)
     f.write('QAOA PARAMETERS\n-------------\n')
-    print(qaoa.get_info(), file = f)
+    qaoa.print_info_qaoa(f)
     f.write('\nGAUSSIAN PROCESS PARAMETERS\n---------------\n')
-    print(gp.get_info(), file = f)
+    gp.print_info(f)
     f.write('\nBAYESIAN OPT PARAMETERS\n------------------\n')
-    f.write('Depth: {} \nNwarmup points: {} \nNtraining points: {}\n'.format(depth, Nwarmup, Nbayes))
+    f.write('Nwarmup points: {} \nNtraining points: {}\n'.format(Nwarmup, Nbayes))
     f.write('FILE.DAT PARAMETERS:\n')
     print(data_names, file = f)
 
