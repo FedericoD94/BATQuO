@@ -14,7 +14,7 @@ from scipy.stats import qmc
 
 class qaoa_pulser(object):
 
-    def __init__(self, depth, param_range, pos, state_prep_noise = 0):
+    def __init__(self, depth, param_range, pos, quantum_noise = None):
         self.C_6_over_h = 5008713.0  #copied from Pulser/pulser/devices/_device_datacls.py / on github
         self.omega = 1.
         self.delta = 1.
@@ -29,7 +29,10 @@ class qaoa_pulser(object):
         self.deg = None
         self.qubits_dict = dict(enumerate(pos))
         self.reg = Register(self.qubits_dict)
-        self.state_prep_noise = state_prep_noise
+        self.quantum_noise = quantum_noise
+        if quantum_noise is not None:
+            self.noise_config = SimConfig(noise=(self.quantum_noise))
+            self.noise_info = self.noise_config.__str__()
         
 
     def get_info(self):
@@ -44,7 +47,8 @@ class qaoa_pulser(object):
         info['Nqubits'] = self.Nqubit
         info['graph'] = self.G.edges
         info['classical sol'] = self.solution
-        info['quantum noise'] = self.state_prep_noise
+        if self.quantum_noise is not None:
+            info['noise info'] = self.noise_info
         
         return info
         
@@ -212,9 +216,8 @@ class qaoa_pulser(object):
     
     def quantum_loop(self, param):
         sim = self.create_quantum_circuit(param)
-        if self.state_prep_noise:
-            cfg = SimConfig(noise=('SPAM'), eta = self.state_prep_noise, epsilon = 0, epsilon_prime = 0)
-            sim.add_config(cfg)
+        if self.quantum_noise is not None:
+            sim.add_config(self.noise_config)
         results = sim.run()
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots']) #sample from the state vector
         return count_dict, results.states
@@ -328,7 +331,10 @@ class qaoa_pulser(object):
         energy = self.expected_energy(C)
         expected_variance = self.expected_variance(C, energy)
         fidelity_sampled = self.fidelity_gs_sampled(C)
-        fidelity_exact = self.fidelity_gs_exact(np.flip(evol[-1]))
+        if self.quantum_noise is None:
+            fidelity_exact = self.fidelity_gs_exact(np.flip(evol[-1]))
+        else:
+            fidelity_exact = 0
         solution_ratio = self.solution_ratio(C)
         
         if show:
