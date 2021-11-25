@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from utils.qaoa_pulser_mod import *
+from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 import random
