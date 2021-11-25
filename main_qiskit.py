@@ -21,12 +21,12 @@ fraction_warmup = args.fraction_warmup
 depth = args.p
 trials = args.trials
 
-num_nodes =args.num_nodes
+num_nodes = args.num_nodes
 average_connectivity = args.average_connectivity
 
 ### PARAMETERS
-Nwarmup = int(args.Nbayes * args.fraction_warmup)
-Nbayes = args.Nbayes - Nwarmup
+Nwarmup = int(args.nbayes * args.fraction_warmup)
+Nbayes = args.nbayes - Nwarmup
 method = 'DIFF-EVOL'
 param_range = [0.01, np.pi]   # extremes where to search for the values of gamma and beta
 
