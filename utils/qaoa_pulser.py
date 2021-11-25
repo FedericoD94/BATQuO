@@ -85,6 +85,25 @@ class qaoa_pulser(object):
         G.add_edges_from(edges)
         return G
         
+    def get_cost_string(self, string):
+        'Receives a string of 0 and 1s and gives back its cost to the MIS hamiltonian'
+        penalty = DEFAULT_PARAMS["penalty"]
+        configuration = np.array(tuple(string),dtype=int)
+        
+        cost = 0
+        cost = -sum(configuration)
+        for edge in self.G.edges:
+            cost += penalty*(configuration[edge[0]]*configuration[edge[1]])
+        
+        return cost
+        
+    def get_cost_dict(self, counter):
+        total_cost = 0
+        for key in counter.keys():
+            cost = self.get_cost_string(key)
+            total_cost += cost * counter[key]
+        return total_cost / sum(counter.values())
+        
     def list_operator(self, op):
         '''Returns a a list of tensor products with op on site 0, 1, 2 ...
         
@@ -151,14 +170,14 @@ class qaoa_pulser(object):
     
         return gs_en, gs_state, deg
         
-    def generate_random_points(self, N_points, return_variance = True):
+    def generate_random_points(self, N_points):
         ''' Generates N_points random points with the latin hypercube method
         
         Attributes:
         N_points: how many points to generate
         return_variance: bool, if to calculate the variance or not
         '''
-        X , Y , VAR = [], [], []
+        X , Y , data_train = [], [], []
         
         hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = DEFAULT_PARAMS['seed'])
         X =  hypercube_sampler.random(N_points)
@@ -167,15 +186,11 @@ class qaoa_pulser(object):
         X = qmc.scale(X, l_bounds, u_bounds).astype(int)
         X = X.tolist()
         for x in X:
-            y, var_y = self.expected_energy_and_variance(x)
+            y, var_y, fid_sampled, fid_exact, sol_ratio, _ , _ = self.apply_qaoa(x)
             Y.append(y)
-            if return_variance:
-                VAR.append(var_y)
+            data_train.append([var_y, fid_sampled, fid_exact, sol_ratio])
         
-        if return_variance:
-            return X, Y, VAR
-        else:
-            return X, Y
+        return X, Y, data_train
 
     def create_quantum_circuit(self, params):
         seq = Sequence(self.reg, Chadoq2)
@@ -255,57 +270,33 @@ class qaoa_pulser(object):
             np.savetxt('../data/raw/graph_Grid_search_{}x{}.dat'.format(num_grid, num_grid), Q)
             np.savetxt('../data/raw/graph_Grid_search_{}x{}_params.dat'.format(num_grid, num_grid), Q)
 
-    def fidelity_gs_sampled(self, x, solution_ratio = False):
+    def fidelity_gs_sampled(self, C):
         '''
         Fidelity sampled means how many times the solution(s) is measured
         '''
-        C = self.get_sampled_state(x)
         fid = 0
         for sol_key in self.solution.keys():
             fid += C[sol_key]
         
         fid = fid/DEFAULT_PARAMS['shots']
         
-        if solution_ratio:
-            sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
-            first_key, second_key =  list(sorted_dict.keys())[:2]
-            if (first_key in self.solution.keys()) and (second_key !=0):
-                sol_ratio = C[first_key]/C[second_key]
-            else:
-                sol_ratio = 0
-            return fid, sol_ratio
-        else:
-            return fid
+        return fid
             
-    def solution_ratio(self, x):
+    def solution_ratio(self, C):
         sol_ratio = 0
-        C = self.get_sampled_state(x)
         sorted_dict = dict(sorted(C.items(), key=lambda item: item[1], reverse=True))
         first_key, second_key =  list(sorted_dict.keys())[:2]
         if (first_key in self.solution.keys()) and (second_key !=0):
             sol_ratio = C[first_key]/C[second_key]
             
         return sol_ratio
-        
-    def fidelity_gs_exact_old(self, param):
-        '''
-        Return the fidelity of the exact qaoa state (obtained with qutip) and the 
-        exact groundstate calculated with the physical hamiltonian of pulser
-        '''
-        C, evolution_states = self.quantum_loop(param)
-        if self.gs_state is None:
-            self.calculate_physical_gs()
-        fid = fidelity(self.gs_state, evolution_states[-1])
-        return fid
-        
 
-    def fidelity_gs_exact(self, param):
+    def fidelity_gs_exact(self, final_state):
         '''
         Return the fidelity of the exact qaoa state (obtained with qutip) and the 
         exact groundstate calculated with the physical hamiltonian of pulser
         '''
-        C, evolution_states = self.quantum_loop(param)
-        final_state = np.squeeze(evolution_states[-1])
+        final_state = np.squeeze(final_state)
         if self.gs_state is None:
             self.calculate_physical_gs()
         if self.deg:
@@ -314,39 +305,9 @@ class qaoa_pulser(object):
         else:
             fidelity = np.squeeze(np.abs(np.dot(final_state, self.gs_state))**2)
         return fidelity
-
-    def get_cost_string(self, string):
-        'Receives a string of 0 and 1s and gives back its cost to the MIS hamiltonian'
-        penalty = DEFAULT_PARAMS["penalty"]
-        configuration = np.array(tuple(string),dtype=int)
-        
-        cost = 0
-        cost = -sum(configuration)
-        for edge in self.G.edges:
-            cost += penalty*(configuration[edge[0]]*configuration[edge[1]])
-        
-        return cost
-            
-    def expected_energy_and_variance(self,
-             params,
-             shots=DEFAULT_PARAMS["shots"]):
-        '''
-        Applies QAOA circuit and estimates final energy and variance
-        '''
-
-        counts = self.get_sampled_state(params)
-        extimated_en = 0
-
-        for configuration in counts:
-            prob_of_configuration = counts[configuration]/shots
-            extimated_en += prob_of_configuration * self.get_cost_string(configuration)
-
-        amplitudes = np.fromiter(counts.values(), dtype=float)
-        amplitudes = amplitudes / shots
-
-        return extimated_en, self.sample_variance(extimated_en, counts, shots)
     
-    def sample_variance(self, sample_mean, counts, shots):
+    def expected_variance(self,counts, sample_mean):
+        shots=DEFAULT_PARAMS["shots"]
         estimated_variance = 0
         for configuration in counts:
             hamiltonian_i = self.get_cost_string(configuration) # energy of i-th configuration
@@ -356,25 +317,20 @@ class qaoa_pulser(object):
 
         return estimated_variance
         
-    def get_cost_dict(self, counter):
-        total_cost = 0
-        for key in counter.keys():
-            cost = self.get_cost_string(key)
-            total_cost += cost * counter[key]
-        return total_cost / sum(counter.values())
-    
-    def get_evolution_states(self, params):
-        C, evol= self.quantum_loop(params)
-        
-        return C, evol
-        
-    def get_sampled_state(self, params):
-        C, _ = self.quantum_loop(params)
-        return C
-        
-    def expected_energy(self, param):
-        C, _ = self.quantum_loop(param)
-        print(C)
+    def expected_energy(self, C):
         cost = self.get_cost_dict(C)
         
         return cost
+
+    def apply_qaoa(self, params, show = False):
+        C, evol= self.quantum_loop(params)
+        
+        energy = self.expected_energy(C)
+        expected_variance = self.expected_variance(C, energy)
+        fidelity_sampled = self.fidelity_gs_sampled(C)
+        fidelity_exact = self.fidelity_gs_exact(evol[-1])
+        solution_ratio = self.solution_ratio(C)
+        
+        if show:
+            self.plot_final_state_distribution(C)
+        return energy, expected_variance, fidelity_sampled, fidelity_exact, solution_ratio, C, evol

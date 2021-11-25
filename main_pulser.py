@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from utils.qaoa_pulser import *
+from utils.qaoa_pulser_mod import *
 from utils.gaussian_process import *
 import time
 import random
@@ -12,7 +12,7 @@ np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 ### TRAIN PARAMETERS
 depth = 2
-Nwarmup = 3
+Nwarmup = 10
 Nbayes = 100
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
@@ -25,7 +25,6 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
                
 qaoa = qaoa_pulser(depth, param_range, pos, eta)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
-
 
 
 ### CREATE GP 
@@ -64,21 +63,15 @@ with open(info_file_name, 'w') as f:
 
 
 ###GENERATE AND FIT TRAINING DATA
-X_train, y_train, var_train = qaoa.generate_random_points(Nwarmup, return_variance = True)
+X_train, y_train, data_train = qaoa.generate_random_points(Nwarmup)
 gp.fit(X_train, y_train)
-
 
 ### STARTS PLOTTING THE DATA
 data_file_name = file_name + '.dat'
-data = [[i] + x + [y_train[i], 
-                    var_train[i],
-                    qaoa.fidelity_gs_exact(x), 
-                    qaoa.fidelity_gs_sampled(x),
-                    qaoa.solution_ratio(x),
-                    gp.kernel_.get_params()['k1__length_scale'],
+data = [[i] + x + [y_train[i]] + data_train[i] +
+                    [gp.kernel_.get_params()['k1__length_scale'],
                     gp.kernel_.get_params()['k2__constant_value'], 0, 0, 0, 0, 0, 0, 0
                     ] for i, x in enumerate(X_train)]
-                    
 format = '%3d ' + 2*depth*'%6d ' + (len(data[0]) - 1 - 2*depth)*'%4.4f '
 np.savetxt(data_file_name, data, fmt = format)
 
@@ -90,12 +83,10 @@ for i in range(Nbayes):
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(method)
     next_point = [int(i) for i in next_point]
     bayes_time = time.time() - start_time
-    y_next_point, variance_next_point = qaoa.expected_energy_and_variance(next_point)
+    y_next_point, var, fid, fid_exact, sol_ratio, _, _ = qaoa.apply_qaoa(next_point)
     qaoa_time = time.time() - start_time - bayes_time
-    fid_exact = qaoa.fidelity_gs_exact(next_point)
-    fid_sampled = qaoa.fidelity_gs_sampled(next_point)
-    sol_ratio = qaoa.solution_ratio(next_point)
     corr_length = gp.kernel_.get_params()['k1__length_scale']
+    constant_kernel = gp.kernel_.get_params()['k2__constant_value']
     #if np.abs(np.log(np.abs(0.01-corr_length))) > 8:
      #   if i == 0:
       #      gp.kernel_.set_params(**{'k1__length_scale': data[-1][-9]})
@@ -104,13 +95,12 @@ for i in range(Nbayes):
        #     gp.kernel_.set_params(**{'k1__length_scale': new_data[-9]})
        #     corr_length = new_data[-9]
 
-    constant_kernel = gp.kernel_.get_params()['k2__constant_value']
     gp.fit(next_point, y_next_point)
     
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
     
-    new_data = [i+Nwarmup] + next_point + [y_next_point, variance_next_point, fid_exact, fid_sampled, sol_ratio, corr_length, constant_kernel, 
+    new_data = [i+Nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio, corr_length, constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]     
 
