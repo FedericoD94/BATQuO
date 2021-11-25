@@ -6,6 +6,8 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 import random
+import datetime
+
 
 np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
@@ -25,7 +27,6 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
                
 qaoa = qaoa_pulser(depth, param_range, pos, eta)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
-
 
 ### CREATE GP 
 kernel =  Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
@@ -51,7 +52,11 @@ data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
 
 info_file_name = file_name + '_info.txt'
 with open(info_file_name, 'w') as f:
-    f.write('BAYESIAN OPTIMIZATION TRAINING INFO \n\n')
+    f.write('BAYESIAN OPTIMIZATION of QAOA \n\n')
+    f.write('Problem: MIS\n')
+    f.write('Cost: -\u03A3 Z_i + {} * \u03A3 Z_i Z_j\n'.format(DEFAULT_PARAMS['penalty']))
+    f.write('Hamiltonian: \u03A9 \u03A3 X_i - \u03b4 \u03A3 Z_i + U \u03A3 Z_i Z_j\n')
+    f.write('Mixing: \u03A9 \u03A3 X_i\n\n')
     f.write('QAOA PARAMETERS\n-------------\n')
     print(qaoa.get_info(), file = f)
     f.write('\nGAUSSIAN PROCESS PARAMETERS\n---------------\n')
@@ -60,7 +65,6 @@ with open(info_file_name, 'w') as f:
     f.write('Depth: {} \nNwarmup points: {} \nNtraining points: {}\n'.format(depth, Nwarmup, Nbayes))
     f.write('FILE.DAT PARAMETERS:\n')
     print(data_names, file = f)
-
 
 ###GENERATE AND FIT TRAINING DATA
 X_train, y_train, data_train = qaoa.generate_random_points(Nwarmup)

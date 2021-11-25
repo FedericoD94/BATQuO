@@ -328,7 +328,7 @@ class qaoa_pulser(object):
         energy = self.expected_energy(C)
         expected_variance = self.expected_variance(C, energy)
         fidelity_sampled = self.fidelity_gs_sampled(C)
-        fidelity_exact = self.fidelity_gs_exact(evol[-1])
+        fidelity_exact = self.fidelity_gs_exact(np.flip(evol[-1]))
         solution_ratio = self.solution_ratio(C)
         
         if show:
