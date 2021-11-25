@@ -19,7 +19,12 @@ import random
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-    def __init__(self, *args, optimizer = "fmin_l_bfgs_b",param_range = [0.1, np.pi], max_iter=2e05, gtol=1e-06, **kwargs):
+    def __init__(self, *args,
+                 optimizer="fmin_l_bfgs_b",
+                 param_range=[0.01, np.pi-0.01],
+                 max_iter=2e05,
+                 gtol=1e-06,
+                 **kwargs):
         super().__init__(optimizer = optimizer, *args, **kwargs)
         self._max_iter = max_iter
         self._gtol = gtol
@@ -156,78 +161,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         return sign*alpha_function
 
-    def bayesian_opt_step(self, init_pos, method = 'FD'):
-        depth = int(len(init_pos)/2)
-
+    def bayesian_opt_step(self, depth, method = 'FD'):
         samples = []
         acqfunvalues = []
 
         def callbackF(Xi, convergence):
             samples.append(Xi.tolist())
             acqfunvalues.append(self.acq_func(Xi, self, 1)[0])
-
-        if method == 'GRID_SEARCH':
-            if depth >1:
-                print('PLS No grid search with p > 1')
-                raise Error
-            X= np.linspace(0, 1, 50, dtype = int)
-            Y= np.linspace(0,1, 50, dtype = int)
-            X_test = list(product(X, Y))
-
-
-            alpha = self.acq_func(X_test, self, 1)
-            #argmax is a number between 0 and N_test**-1 telling us where is the next point to sample
-            argmax = np.argmax(np.round(alpha, 3))
-            next_point = X_test[argmax]
-
-        if method == 'HMC':
-            path_length = .2
-            step_size = .02
-            epsilon = .001
-            epochs = 10
-            hmc_samples, traj, success= HMC(func = self.acq_func,
-                                            initial_position = init_pos,
-                                            path_len=path_length,
-                                            step_size=step_size,
-                                            epsilon = epsilon,
-                                            epochs=epochs)
-            cols = int(len(init_pos)*4)
-            rows = int((path_length/step_size+1)*(epochs))
-            traj_to_print = np.reshape(traj, (rows, cols))
-            np.savetxt('Trajectories.dat',
-                        traj_to_print,
-                        header='[q_i, q_f],  [p_i, p_f],  self.acq_func(q1), dVdQ_1, dVdq_2',
-                        fmt='  %1.3f')
-
-            accepted_samples = hmc_samples[success == True]
-            if len(accepted_samples) == 0:
-                print('Warning: there where 0 accepted samples. Restarting with new values')
-                next_point = 0
-
-            if accepted_samples.shape[0] > 0:
-                next_point = np.mean(accepted_samples[-10:], axis = 0)
-            else:
-                next_point = [0,0]
-
-            if epochs< 100:
-                plot_trajectories(self.acq_func, traj, success, save = True)
-
-        if method == 'FD':
-            l_rate = 0.001
-            gd_params = gradient_descent(self.acq_func,
-                                        l_rate,
-                                        init_pos,
-                                        max_iter = 400,
-                                        method = method,
-                                        verbose = 1)
-            next_point = gd_params[-1][:2]
-
-        if method == 'SCIPY':
-            results = minimize(self.acq_func,
-                                bounds = [(0,1), (0,1)]*depth,
-                                x0 = init_pos,
-                                args = (self, -1))
-            next_point = results.x
 
         if method == 'DIFF-EVOL':
             with DifferentialEvolutionSolver(self.acq_func,
@@ -239,7 +179,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             dist_tol = 0.01,
                                             seed = self.seed,
                                             args = (self, -1)) as diff_evol:
-                results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
+                results, average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
             success = results.success
         next_point = self.scale_up(next_point)
