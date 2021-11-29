@@ -20,7 +20,7 @@ Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 global_time = time.time()
-quantum_noise = None #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one or None
+quantum_noise = 'SPAM' #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one or None
 
 ### CREATE GRAPH AND QAOA INSTANCE
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -43,7 +43,7 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
 
 ### DATA SAVING
-file_name = 'p={}_punti={}_warmup={}_train={}'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'spam_error/p={}_punti={}_warmup={}_train={}'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 data = []
 gamma_names = ['GAMMA' + str(i) + ' ' for i in range(depth)]
 beta_names = ['BETA' + str(i) + ' ' for i in range(depth)]
