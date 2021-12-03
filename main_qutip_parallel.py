@@ -72,9 +72,6 @@ gs_energy, gs_state, degeneracy = qaoa.gs_en, qaoa.gs_states, qaoa.deg
 
 print(gs_energy, degeneracy, qaoa.gs_binary)
 
-
-init_pos = [0.2, 0.2]*depth
-
 DEFAULT_PARAMS["seed"] = seed + i_trial
 file_name = f'p_{depth}_punti_{nwarmup + nbayes}_warmup_{nwarmup}_train_{nbayes}_trial_{i_trial}_graph_{name_plot}.dat'
 data = []
