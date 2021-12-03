@@ -28,8 +28,8 @@ num_nodes =args.num_nodes
 average_connectivity = args.average_connectivity
 
 ### PARAMETERS
-Nwarmup = int(args.Nbayes * args.fraction_warmup)
-Nbayes = args.Nbayes - Nwarmup
+Nwarmup = int(args.nbayes * args.fraction_warmup)
+Nbayes = args.nbayes - Nwarmup
 method = 'DIFF-EVOL'
 param_range = [0.01, np.pi]   # extremes where to search for the values of gamma and beta
 
@@ -70,8 +70,6 @@ gs_energy, gs_state, degeneracy = qaoa.gs_en, qaoa.gs_states, qaoa.deg
 
 print(gs_energy, degeneracy, qaoa.gs_binary)
 
-
-init_pos = [0.2, 0.2]*depth
 for i_trial in range(trials):
     DEFAULT_PARAMS["seed"] = seed + i_trial
     file_name = f'p_{depth}_punti_{Nwarmup + Nbayes}_warmup_{Nwarmup}_train_{Nbayes}_trial_{i_trial}_graph_{name_plot}.dat'
@@ -106,7 +104,7 @@ for i_trial in range(trials):
     print(X_train)
     for i in range(Nbayes):
         start_time = time.time()
-        next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
+        next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(depth, method)
         fin_state, mean_energy, variance, fidelity_tot =  qaoa.quantum_algorithm(next_point)
         bayes_time = time.time() - start_time
         y_next_point = mean_energy
