@@ -139,3 +139,7 @@ cython_debug/
 
 # MAC OS
 .DS_Store
+
+# custom
+*.pdf
+*.dat
