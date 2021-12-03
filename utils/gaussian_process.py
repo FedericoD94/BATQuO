@@ -256,7 +256,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         '''
         elle = np.random.uniform(low = bounds_elle[0], high=bounds_elle[1], size=(N_points,))
         sigma = np.random.uniform(low = bounds_sigma[0], high=bounds_sigma[1], size=(N_points,))
-        
         hyper_params = list(zip(elle,sigma))
         
         return hyper_params
@@ -265,20 +264,15 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         ''' Averages the value of the acq_func for different sets of hyperparameters chosen
         (for now) by uniform sampling '''
         
-        M = 30
-        hyper_params = self.pick_hyperparameters(M, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds'])
+        hyper_params = args[-1]
         acq_func_values = []
         for params in hyper_params:
             self.kernel.set_params(**{'k1__length_scale': params[0]})
             self.kernel.set_params(**{'k2__constant_value': params[1]})
             acq_func_values.append(self.acq_func(x, *args))
             
-        return np.average(acq_func_values)
+        return np.mean(acq_func_values)
         
-    def prova(self):
-        self.mc_acq_func([0.2, 0.2], (self,-1))
-        exit()
-
     def bayesian_opt_step(self, method = 'DIFF-EVOL', init_pos = None):
         ''' Performs one step of bayesian optimization
         
@@ -374,7 +368,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             next_point = results.x
 
         if method == 'DIFF-EVOL':
-            with DifferentialEvolutionSolver(self.acq_func,
+            hyper_params = self.pick_hyperparameters(30, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds'])
+            with DifferentialEvolutionSolver(self.mc_acq_func,
                                             bounds = [(0,1), (0,1)]*depth,
                                             callback = None,
                                             maxiter = 100*depth,
@@ -382,7 +377,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             tol = .001,
                                             dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
                                             seed = self.seed,
-                                            args = (self, -1)) as diff_evol:
+                                            args = (self, -1, hyper_params)) as diff_evol:
                 results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
         next_point = self.scale_up(next_point)

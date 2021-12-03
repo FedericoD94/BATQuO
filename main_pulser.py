@@ -13,8 +13,8 @@ np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 ### TRAIN PARAMETERS
-depth = 3
-Nwarmup = 20
+depth = 1
+Nwarmup = 10
 Ntot = 200
 Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
@@ -32,7 +32,8 @@ gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 ### CREATE GP 
 kernel =  Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
                 length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], 
-                nu=DEFAULT_PARAMS['nu'])*ConstantKernel(1, constant_value_bounds = DEFAULT_PARAMS['constant_bounds'])
+                nu=DEFAULT_PARAMS['nu'])*ConstantKernel(DEFAULT_PARAMS['initial_length_scale'], 
+                                        constant_value_bounds = DEFAULT_PARAMS['constant_bounds'])
                 
 gp = MyGaussianProcessRegressor(kernel=kernel, 
                                 optimizer = DEFAULT_PARAMS['optimizer_kernel'],
