@@ -88,6 +88,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                   initial_theta,
                                   bounds):
         '''
+        Overrides the super()._constrained_optimization to perform otpimization of the kernel
+        parameters by maximizing the log marginal likelihood.
+        It is only called by super().fit, so at every fitting of the training points
+        or at a new bayesian opt step. Options for the optimization are fmin_l_bfgs_b, 
+        differential_evolution or monte_carlo. The latter just averages over M = 30 values
+        of the hyperparameters and returns this average.
+        
         Do not change the elif option
         '''
         
@@ -122,6 +129,11 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             theta_opt, func_min = results.x, results.fun
 
+        elif self.optimizer == 'monte_carlo':
+            M = 30
+            hyper_params = self.pick_hyperparameters(M, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds'])
+            theta_opt = np.mean(np.log(hyper_params), axis = 0)
+            func_min = obj_func_no_grad(theta_opt)
 
         elif callable(self.optimizer):
             theta_opt, func_min = self.optimizer(obj_func,
@@ -229,7 +241,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         if isinstance(x[0], float):
             x = np.reshape(x, (1, -1))
         f_x, sigma_x = self.predict(x, return_std=True) 
-
         f_prime = self.y_best #current best value
         
         #Ndtr is a particular routing in scipy that computes the CDF in half the time
@@ -238,6 +249,35 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
         
         return sign*alpha_function
+        
+        
+    def pick_hyperparameters(self, N_points, bounds_elle, bounds_sigma):
+        ''' Generates array of (N_points,2) random hyperaparameters inside given bounds
+        '''
+        elle = np.random.uniform(low = bounds_elle[0], high=bounds_elle[1], size=(N_points,))
+        sigma = np.random.uniform(low = bounds_sigma[0], high=bounds_sigma[1], size=(N_points,))
+        
+        hyper_params = list(zip(elle,sigma))
+        
+        return hyper_params
+        
+    def mc_acq_func(self, x, *args):
+        ''' Averages the value of the acq_func for different sets of hyperparameters chosen
+        (for now) by uniform sampling '''
+        
+        M = 30
+        hyper_params = self.pick_hyperparameters(M, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds'])
+        acq_func_values = []
+        for params in hyper_params:
+            self.kernel.set_params(**{'k1__length_scale': params[0]})
+            self.kernel.set_params(**{'k2__constant_value': params[1]})
+            acq_func_values.append(self.acq_func(x, *args))
+            
+        return np.average(acq_func_values)
+        
+    def prova(self):
+        self.mc_acq_func([0.2, 0.2], (self,-1))
+        exit()
 
     def bayesian_opt_step(self, method = 'DIFF-EVOL', init_pos = None):
         ''' Performs one step of bayesian optimization

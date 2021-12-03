@@ -10,3 +10,5 @@ qutip==4.6.2
 scikit_learn==1.0.1
 scipy==1.7.1
 tqdm==4.62.3
+python==3.7.10
+dill==0.3.4

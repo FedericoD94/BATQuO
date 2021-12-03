@@ -11,16 +11,15 @@ np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 
-Ntot = 200
-
 ### PARAMETERS
 depth = int(sys.argv[1])
 Nwarmup = 20
+Ntot = 200
 Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
 global_time = time.time()
-quantum_noise = 'SPAM' #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one or None
+quantum_noise = None #'SPAM', 'doppler', 'dephasing', 'amplitude' or a TUPLE of more than one or None
 
 ### CREATE GRAPH AND QAOA INSTANCE
 #pos = np.array([[0., 0.],[-4, -7],[4, -7],[8, 6],[-8, 6]])
@@ -32,7 +31,7 @@ gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 ### CREATE GP 
 kernel =  Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
                 length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], 
-                nu=DEFAULT_PARAMS['nu'])*ConstantKernel(1)
+                nu=DEFAULT_PARAMS['nu'])*ConstantKernel(1, constant_value_bounds = DEFAULT_PARAMS['constant_bounds'])
                 
 gp = MyGaussianProcessRegressor(kernel=kernel, 
                                 optimizer = DEFAULT_PARAMS['optimizer_kernel'],
@@ -41,9 +40,8 @@ gp = MyGaussianProcessRegressor(kernel=kernel,
                                 normalize_y=True,
                                 gtol=1e-06,
                                 max_iter=DEFAULT_PARAMS['max_iter_lfbgs'])
-
 ### DATA SAVING
-file_name = 'spam_error/p={}_punti={}_warmup={}_train={}'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+file_name = 'p={}_punti={}_warmup={}_train={}'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 data = []
 gamma_names = ['GAMMA' + str(i) + ' ' for i in range(depth)]
 beta_names = ['BETA' + str(i) + ' ' for i in range(depth)]
@@ -77,10 +75,10 @@ data = [[i] + x + [y_train[i]] + data_train[i] +
 format = '%3d ' + 2*depth*'%6d ' + (len(data[0]) - 1 - 2*depth)*'%4.4f '
 np.savetxt(data_file_name, data, fmt = format)
 
+
 #### BAYESIAN OPTIMIZATION PROCEDURE
 print('Training ...')
 for i in range(Nbayes):
-    print('iteration: {}/{}'.format(i, Nbayes))
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(method)
     next_point = [int(i) for i in next_point]
@@ -108,6 +106,7 @@ for i in range(Nbayes):
 
     data.append(new_data)
     np.savetxt(data_file_name, data, fmt = format)
+    print('iteration: {}/{} en: {}, fid: {}'.format(i, Nbayes, y_next_point, fid))
 
 best_x, best_y, where = gp.get_best_point()
 data.append(data[where])
