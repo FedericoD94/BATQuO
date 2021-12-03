@@ -113,6 +113,20 @@ class qaoa_qutip(object):
         return U
 
 
+    def gibbs_obj_func(self, eta):
+        # Gibbs objective function
+        eigen_energies = np.diagonal(self.H_c)
+        evol_op = []
+        for j_state, el in enumerate(eigen_energies):
+            bin_state = np.binary_repr(j_state, self.N)
+            eigen_state =  qu.tensor([qu.basis(2, int(e_state)) for e_state in bin_state])
+            evol_op.append(np.exp(-1 * eta * el) * eigen_state * eigen_state.dag())
+        gibbs = sum(evol_op)
+
+        return gibbs
+
+
+
     def s2z(self, configuration):
         return [1 - 2 * s for s in configuration]
 
@@ -178,6 +192,7 @@ class qaoa_qutip(object):
 
     def quantum_algorithm(self,
                           params,
+                          obj_func="energy",
                           penalty=DEFAULT_PARAMS["penalty"]):
 
         depth = int(len(params)/2)
@@ -201,8 +216,13 @@ class qaoa_qutip(object):
 
         fidelity_tot = np.sum(fidelities)
 
-        return state_0, mean_energy, variance, fidelity_tot
+        if obj_func == "energy":
+            return state_0, mean_energy, variance, fidelity_tot
 
+        elif obj_func == "gibbs":
+            gibbs_op = self.gibbs_obj_func(eta=2)
+            mean_gibbs = -np.log(qu.expect(gibbs_op, state_0))
+            return state_0, mean_gibbs, variance, fidelity_tot
 
     def generate_random_points(self,
                                N_points,
