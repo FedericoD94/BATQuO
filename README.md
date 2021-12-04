@@ -2,6 +2,8 @@
 
 A library for QAOA with bayesian optimisation.
 
+## Usage
+
 ### Poetry
 
 - Open the terminal, enter the folder and execute the command ```poetry install```
