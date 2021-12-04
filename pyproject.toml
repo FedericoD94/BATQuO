@@ -22,5 +22,5 @@ qiskit = "0.31.0"
 main = "src.main_qutip:main"
 
 [build-system]
-requires = ["poetry>=1.1.4"]
+requires = ["poetry=1.1.4"]
 build-backend = "poetry.masonry.api"

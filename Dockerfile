@@ -1,6 +1,13 @@
-FROM python:3.7.8-slim-buster as base
+FROM python:3.7.9-slim-buster as base
 
-# Leitha Proxy specifics
+# leitha Proxy specifics
+ENV http_proxy $http_proxy
+ENV https_proxy $http_proxy
+ENV HTTP_PROXY $http_proxy
+ENV HTTPS_PROXY $http_proxy
+ENV no_proxy gitlab-leitha.servizi.gr-u.it
+ENV profile_active local
+
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1 \
@@ -9,20 +16,29 @@ ENV PYTHONFAULTHANDLER=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_VERSION=1.0.5
+    POETRY_VERSION=1.1.4
 
-# Install poetry
+# install git
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git
+
+# install poetry
 RUN pip install "poetry==$POETRY_VERSION"
 
-# Install requirements using poetry
+# install requirements using poetry
 WORKDIR /qaoa-pipeline
 COPY poetry.lock pyproject.toml ./
 RUN poetry install
 
-COPY *.py .
+# copy the scripts
+COPY src ./src/
 
 # install the src as package as last thing to leverage Docker cache
 RUN poetry install
+
+# configure Git to handle line endings
+RUN git config --global core.autocrlf true
 
 ENTRYPOINT ["bash"]
 
