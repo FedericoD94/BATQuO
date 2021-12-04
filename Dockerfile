@@ -31,9 +31,6 @@ WORKDIR /qaoa-pipeline
 COPY poetry.lock pyproject.toml ./
 RUN poetry install
 
-# copy the scripts
-COPY src ./src/
-
 # install the src as package as last thing to leverage Docker cache
 RUN poetry install
 
