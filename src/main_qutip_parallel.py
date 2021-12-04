@@ -11,8 +11,8 @@ from utils.create_graphs import (create_random_graph,
                                  )
 from utils.parameters import parse_command_line
 from utils.default_params import *
-import json
 import time
+from pathlib import Path
 
 np.set_printoptions(precision=4, suppress=True)
 
@@ -73,6 +73,7 @@ gs_energy, gs_state, degeneracy = qaoa.gs_en, qaoa.gs_states, qaoa.deg
 print(gs_energy, degeneracy, qaoa.gs_binary)
 
 DEFAULT_PARAMS["seed"] = seed + i_trial
+output_folder = Path(__file__).parents[1] / "output"
 file_name = f'p_{depth}_punti_{nwarmup + nbayes}_warmup_{nwarmup}_train_{nbayes}_trial_{i_trial}_graph_{name_plot}.dat'
 data = []
 ### CREATE GP AND FIT TRAINING DATA
@@ -138,7 +139,7 @@ for i in range(nbayes):
     format_list[0] = '% 4d '
     format_list[-5] = '% 8d '
     fmt_string = "".join(format_list)
-    np.savetxt(file_name,
+    np.savetxt(output_folder / file_name,
                data,
                fmt=fmt_string,
                header="".join(results_structure)
@@ -148,7 +149,7 @@ best_x, best_y, where = gp.get_best_point()
 
 data.append(data[where])
 
-np.savetxt(file_name,
+np.savetxt(output_folder / file_name,
            np.array(data),
            fmt=fmt_string,
            header="".join(results_structure)

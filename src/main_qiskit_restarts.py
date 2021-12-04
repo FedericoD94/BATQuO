@@ -3,27 +3,32 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from utils.qaoa_qiskit import *
 from utils.gaussian_process import *
-import json
 import time
+from pathlib import Path
 
-'RUNNA IL MAIN AUMENTANDO I P UTILIZZANDO COME STARTING POINTS QUELLI DEL PUNTO PRECEDENTE'
+'Qiskit runnato N volte ripartendo da punti dversi ogni volta'
+
 np.set_printoptions(precision = 4, suppress = True)
 
-### PARAMETERS
-depths = np.arange(1, 10, 1)
-
-for depth in depths:
+N = 20
+for i in range(N):
+	np.random.seed(i)
+	random.seed(i)
+	### PARAMETERS
+	depth = 4
 	Nwarmup =10
 	Nbayes = 90
 	method = 'DIFF-EVOL'
 	param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
-
-	file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
+ 
+	output_folder = Path(__file__).parents[1] / "output"
+	file_name = 'p={}_punti={}_warmup={}_train={}_i_{}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes, i)
 
 	global_time = time.time()
 	results_structure = ['iter ', 'point ', 'energy ', 'fidelity ', 'corr_length ', 'const kernel ',
 						'std energies ', 'average distances ', 'nit ', 'time opt bayes ', 'time qaoa ', 'time opt kernel ', 'time step ']
 	data = []
+
 
 	### CREATE GRAPH 
 	pos = np.array([[0, 1], [0, 2], [1, 2], [0, 3], [0, 4]])
@@ -40,18 +45,16 @@ for depth in depths:
 	kernel =  ConstantKernel(1)*Matern(length_scale=0.11,length_scale_bounds=(0.01, 100), nu=1.5)
 	gp = MyGaussianProcessRegressor(kernel=kernel, 
 									optimizer = 'fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
-									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor     
+									#optimizer = 'differential_evolution', #fmin_l_bfgs_bor                                 
 									param_range = param_range,
 									n_restarts_optimizer=10, 
 									alpha=1e-2,
 									normalize_y=True,
 									max_iter=50000)
-	if depth == 1:
-		X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
-	else:
-		X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range, fixed_params = last_best)
-		
+
+	X_train, y_train = qaoa.generate_random_points(Nwarmup, depth, param_range)
 	gp.fit(X_train, y_train)
+
 
 	data = [[i] + x + [y_train[i], 
 						qaoa.fidelity_gs(x), 
@@ -81,12 +84,12 @@ for depth in depths:
 		data.append(new_data)
 		#print((i+1),' / ',Nbayes)
 		format = '%.d ' + (len(new_data) - 1)*'%.4f '
-		np.savetxt(file_name, data, fmt = format)
+		np.savetxt(output_folder / file_name, data, fmt = format)
 	
 	best_x, best_y, where = gp.get_best_point()
-	last_best = best_x
+
 	data.append(data[where])
 
-	np.savetxt(file_name, np.array(data), fmt = format)
-	print('Best point: ' , data[where])
-	print('time: ',  time.time() - global_time)
+np.savetxt(output_folder / file_name, np.array(data), fmt = format)
+print('Best point: ' , data[where])
+print('time: ',  time.time() - global_time)

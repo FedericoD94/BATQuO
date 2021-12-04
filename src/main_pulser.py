@@ -6,6 +6,8 @@ from utils.qaoa_pulser import *
 from utils.gaussian_process import *
 import time
 
+from pathlib import Path
+
 ### TRAIN PARAMETERS
 depth = 1
 Nwarmup = 3
@@ -14,6 +16,7 @@ method = 'DIFF-EVOL'
 param_range = [100, 2000]   # extremes where to search for the values of gamma and beta
 quantum_noise = 1
 
+output_folder = Path(__file__).parents[1] / "output"
 file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 
 data = []
@@ -53,12 +56,12 @@ data = [[i] + x + [y_train[i],
                     gp.kernel_.get_params()['k1__constant_value'], 0, 0, 0, 0, 0, 0, 0
                     ] for i, x in enumerate(X_train)]
                     
-init_pos = [0.2, 0.2]*depth
+#init_pos = [0.2, 0.2]*depth
 print('Training ...')
 print(X_train)
 for i in range(Nbayes):
     start_time = time.time()
-    next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(init_pos, method)
+    next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(depth, method)
     bayes_time = time.time() - start_time
     y_next_point = qaoa.expected_energy(next_point)
     qaoa_time = time.time() - start_time - bayes_time
@@ -78,11 +81,11 @@ for i in range(Nbayes):
     print((i+1),' / ',Nbayes)
     print(new_data)
     format = '%.d ' + (len(new_data) - 1)*'%.4f '
-    np.savetxt(file_name, data, fmt = format)
+    np.savetxt(output_folder / file_name, data, fmt = format)
      
 best_x, best_y, where = gp.get_best_point()
 data.append(data[where])
 
-np.savetxt(file_name, np.array(data), fmt = format)
+np.savetxt(output_folder / file_name, np.array(data), fmt = format)
 print('Best point: ' , data[where])
 print('time: ',  time.time() - global_time)

@@ -1,12 +1,10 @@
 import networkx as nx
-from networkx.readwrite import json_graph
 from networkx.generators.random_graphs import random_regular_graph
 from itertools import combinations
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 from networkx.linalg.graphmatrix import adjacency_matrix
-
+from pathlib import Path
 
 def create_random_graph(num_nodes, average_connectivity, name_plot=False):
     G = nx.Graph()
@@ -47,6 +45,9 @@ def _plot_graph(G, graph_name_file):
     num_nodes = G.number_of_nodes()
     pos = nx.spring_layout(G, seed=1)
     nx.draw(G, pos=pos, with_labels=True)
-    plt.savefig(graph_name_file + ".pdf")
+    plt.savefig(str(Path(__file__).parents[2] / "output" / "graph" / graph_name_file) + ".pdf")
     A = nx.to_numpy_array(G, nodelist=range(num_nodes), dtype=int)
-    np.savetxt(graph_name_file + "_adj_mat.dat", A, fmt="%d")
+    np.savetxt(str(Path(__file__).parents[2] / "output" / "graph" / graph_name_file) + "_adj_mat.dat", A, fmt="%d")
+    
+    
+    

@@ -6,6 +6,7 @@ from utils.gaussian_process import *
 import json
 import time
 import sys
+from pathlib import Path
 
 'RUNNA IL MAIN VARIANDO NUMERO DI WARMUP POINTS E NUMERO TOTALE DI POINT DA RUNNARE SU CLUSTER IN PARALLELO'
 
@@ -23,6 +24,7 @@ for percentage_warmup in percentages_warmup:
 	method = 'DIFF-EVOL'
 	param_range = [0.1, np.pi]   # extremes where to search for the values of gamma and beta
 
+	output_folder = Path(__file__).parents[1] / "output"
 	file_name = 'p={}_punti={}_warmup={}_train={}.dat'.format(depth, Nwarmup + Nbayes, Nwarmup, Nbayes)
 	data = []
 	global_time = time.time()
@@ -81,10 +83,10 @@ for percentage_warmup in percentages_warmup:
 		data.append(new_data)
 		#print((i+1),' / ',Nbayes)
 		format  = '%.d ' + (len(new_data) - 1)*'%.4f '
-		np.savetxt(file_name, data, fmt = format)
+		np.savetxt(output_folder / file_name, data, fmt = format)
 
 	best_x, best_y, where = gp.get_best_point()
 
 	data.append(data[where])
 
-	np.savetxt(file_name, np.array(data), fmt = format)
+	np.savetxt(output_folder / file_name, np.array(data), fmt = format)

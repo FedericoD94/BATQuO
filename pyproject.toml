@@ -2,7 +2,7 @@
 name = "qaoa-pipeline"
 version = "0.1.0"
 description = "hybrid pipeline for qaoa"
-authors = ["Edoardo <Edoardo.Tignone@leitha.eu>"]
+authors = ["Davide <davide.vodola@unibo.it>", "Simone <simone.tibaldi2@unibo.it>", "Federico <federico.dellanna2@unibo.it>" , "Edoardo <edoardo.tignone@leitha.eu>", "Elisa <elisa.ercolessi@unibo.it>"]
 
 [tool.poetry.dependencies]
 python = "3.7.9"
@@ -19,7 +19,7 @@ pulser = "0.3.2"
 qiskit = "0.31.0"
 
 [tool.poetry.scripts]
-main = "main_qutip:main"
+main = "src.main_qutip:main"
 
 [build-system]
 requires = ["poetry>=1.1.4"]
