@@ -17,7 +17,7 @@ NOTE: In order to install the poetry environment you **need Python >= 3.7.1 and 
 
 Open the terminal and:
 - Enter the repo: ```cd <path-to-this-repo-folder>```
-- Build the docker image: ```docker build -t qaoa-pipeline .```
+- Build the image: ```docker build -t qaoa-pipeline .```
 - Run the container and enter: ```docker run --rm -v <absolute-path-to-folder-output-in-this-repo>:/qaoa-pipeline/output -it qaoa-pipeline```
 - Once inside the container, you can look at the available arguments (```poetry run python src/main_qutip.py --help```) and run the program, e.g.: ```poetry run python src/main_qutip.py --num_nodes 6 --p 2```
 
