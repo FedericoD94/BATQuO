@@ -44,7 +44,18 @@ def dat_to_df(file_path: str) -> pd.DataFrame:
 
 def save_plots(file_path: str, gs_energy: int, problem: str = None) -> None:
     
-    # set current best known value
+    """Given a .dat file, saves the corresponding plot 
+
+    Args:
+        file_path: Path to the .dat file to load
+        gs_energy: True ground state of the Hamiltonian
+        problem: Problem name, necessary to plot the best current benchmark (at the moment of writing, only "MAX-CUT" is supported)
+
+    Returns:
+        None
+
+    """
+
     current_best_benchmark = None
     if problem == "MAX-CUT":
         current_best_benchmark = 0.9326
@@ -74,7 +85,7 @@ def save_plots(file_path: str, gs_energy: int, problem: str = None) -> None:
                              'average_distances']):
         if col == 'ratio':
             if current_best_benchmark is not None:
-                axs[i].plot(range(len(df[col])), [current_best_benchmark] * len(range(len(df[col]))), '-k', label = "benchmark", color = "red")
+                axs[i].plot(range(len(df[col])), [current_best_benchmark] * len(range(len(df[col]))), label = "benchmark", color = "red")
                 axs[i].legend(loc="lower right")
     
         axs[i].plot(df[col], linestyle='dashed', marker='o', color='blue', markersize=3)

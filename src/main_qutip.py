@@ -11,6 +11,7 @@ from utils.parameters import parse_command_line
 from utils.default_params import *
 import time
 from pathlib import Path
+from utils.data_analysis import save_plots
 
 np.set_printoptions(precision=4, suppress=True)
 
@@ -31,6 +32,7 @@ average_connectivity = args.average_connectivity
 Nwarmup = int(args.nbayes * args.fraction_warmup)
 Nbayes = args.nbayes - Nwarmup
 method = 'DIFF-EVOL'
+problem = 'MAX-CUT'
 param_range = [0.01, np.pi]   # extremes where to search for the values of gamma and beta
 
 global_time = time.time()
@@ -65,7 +67,7 @@ num_graph = seed
 name_plot = str(seed)
 G = create_random_regular_graph(num_nodes, degree=3, seed=1, name_plot=name_plot)
 
-qaoa = qaoa_qutip(G, problem="MAX-CUT")
+qaoa = qaoa_qutip(G, problem=problem)
 gs_energy, gs_state, degeneracy = qaoa.gs_en, qaoa.gs_states, qaoa.deg
 
 print(gs_energy, degeneracy, qaoa.gs_binary)
@@ -155,3 +157,5 @@ for i_trial in range(trials):
                )
     print('Best point: ' , data[where])
     print('time: ', time.time() - global_time)
+    
+    save_plots(str(output_folder / file_name), gs_energy = gs_energy, problem = problem)
