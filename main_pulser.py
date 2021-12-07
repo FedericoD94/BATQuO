@@ -13,9 +13,9 @@ np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 ### TRAIN PARAMETERS
-depth = 1
+depth = 2
 Nwarmup = 10
-Ntot = 200
+Ntot = 100
 Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
@@ -67,7 +67,7 @@ with open(info_file_name, 'w') as f:
 ###GENERATE AND FIT TRAINING DATA
 X_train, y_train, data_train = qaoa.generate_random_points(Nwarmup)
 gp.fit(X_train, y_train)
-
+#gp.plot_log_marginal_likelihood(show = False, save = True)
 ### STARTS PLOTTING THE DATA
 data_file_name = file_name + '.dat'
 data = [[i] + x + [y_train[i]] + data_train[i] +
@@ -98,6 +98,8 @@ for i in range(Nbayes):
        #     corr_length = new_data[-9]
 
     gp.fit(next_point, y_next_point)
+    #gp.plot_log_marginal_likelihood(show = False, save = True)
+
     
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time

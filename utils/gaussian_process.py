@@ -116,6 +116,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 #                print("BBBBB")
  #               exit()                    
             theta_opt, func_min = opt_res.x, opt_res.fun
+            print(np.exp(theta_opt), func_min)
+
 
 
         elif self.optimizer == 'differential_evolution':
@@ -368,7 +370,10 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             next_point = results.x
 
         if method == 'DIFF-EVOL':
-            hyper_params = self.pick_hyperparameters(30, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds'])
+            hyper_params = np.array(self.pick_hyperparameters(500, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
+            lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
+            idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
+            best_params = hyper_params[idx_max_values]
             with DifferentialEvolutionSolver(self.mc_acq_func,
                                             bounds = [(0,1), (0,1)]*depth,
                                             callback = None,
@@ -377,7 +382,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             tol = .001,
                                             dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
                                             seed = self.seed,
-                                            args = (self, -1, hyper_params)) as diff_evol:
+                                            args = (self, -1, best_params)) as diff_evol:
                 results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
         next_point = self.scale_up(next_point)
@@ -453,13 +458,18 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         x = np.zeros((num, num))
         for i in range(num):
             for j in range(num):
-                x[j, i] = self.log_marginal_likelihood([i/num*2,j/num*2])
-        im = plt.imshow(x, extent = [0,2,0,2], origin = 'lower')
+                x[j, i] = self.log_marginal_likelihood([np.log((i+0.001)*2/num),np.log((j+0.001)*10/num)])
+        min_x = DEFAULT_PARAMS['length_scale_bounds'][0]
+        max_x = DEFAULT_PARAMS['length_scale_bounds'][1]
+        min_y = DEFAULT_PARAMS['constant_bounds'][0]
+        max_y = DEFAULT_PARAMS['constant_bounds'][1]
+        im = plt.imshow(x, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
         plt.xlabel('Corr length')
         plt.ylabel('Constant')
         plt.colorbar(im)
+        max = np.max(x)
+        plt.clim(max-5, max*1.1)
         plt.title('log_marg_likelihood iter:{} kernel_{}'.format(len(self.X), self.kernel_))
-
         if save:
             plt.savefig('data/marg_likelihood_iter={}_kernel={}.png'.format(len(self.X), self.kernel_))
         if show:

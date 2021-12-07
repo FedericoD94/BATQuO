@@ -8,10 +8,10 @@ DEFAULT_PARAMS = {"penalty": 2,
                   "initial_length_scale" : 1,
                   "length_scale_bounds" : (0.1, 2),
                   "initial_sigma":1,
-                  "constant_bounds":(0.1, 10),
-                  "nu" : 2.5,
+                  "constant_bounds":(0.1, 100),
+                  "nu" : 1.5,
                   "max_iter_lfbgs": 50000,
-                  "optimizer_kernel": 'fmin_l_bfgs_b', #monte_carlo', #'fmin_l_bfgs_b',
+                  "optimizer_kernel":None, #'fmin_l_bfgs_b', #monte_carlo', #'fmin_l_bfgs_b',
                   "n_restart_kernel_optimizer":9,
                   "distance_conv_tol": 0.01
                   }
