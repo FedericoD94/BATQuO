@@ -370,11 +370,18 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             next_point = results.x
 
         if method == 'DIFF-EVOL':
-            hyper_params = np.array(self.pick_hyperparameters(500, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
-            lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
-            idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
-            best_params = hyper_params[idx_max_values]
-            with DifferentialEvolutionSolver(self.mc_acq_func,
+            if DEFAULT_PARAMS['diff_evol_func'] == 'mc':
+                hyper_params = np.array(self.pick_hyperparameters(500, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
+                lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
+                idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
+                best_params = hyper_params[idx_max_values]
+                
+                diff_evol_args = (self, -1, best_params)
+                fun = self.mc_acq_func
+            else:
+                fun = self.acq_func
+                diff_evol_args = (self, -1)
+            with DifferentialEvolutionSolver(fun,
                                             bounds = [(0,1), (0,1)]*depth,
                                             callback = None,
                                             maxiter = 100*depth,
@@ -382,7 +389,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             tol = .001,
                                             dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
                                             seed = self.seed,
-                                            args = (self, -1, best_params)) as diff_evol:
+                                            args = diff_evol_args) as diff_evol:
                 results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
         next_point = self.scale_up(next_point)
