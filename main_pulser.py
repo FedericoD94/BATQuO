@@ -13,7 +13,7 @@ np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 ### TRAIN PARAMETERS
-depth = 
+depth = 1
 Nwarmup = 20
 Ntot = 200
 Nbayes = Ntot-Nwarmup

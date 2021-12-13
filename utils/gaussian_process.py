@@ -266,6 +266,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
         best_params = hyper_params[idx_max_values]
         '''
+        states = tfp.mcmc.sample_chain(
+          num_results=1000,
+          kernel=tfp.mcmc.SliceSampler(
+              target_log_prob_fn=self.log_marginal_likelihood,
+              max_doublings=5),
+          num_burnin_steps=1000-N_points)
+      
         hyper_params = tfp.mcmc.SliceSampler(self.log_marginal_likelihood, num_results=N_points)
         
         return hyper_params
