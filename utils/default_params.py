@@ -12,7 +12,7 @@ DEFAULT_PARAMS = {"penalty": 2,
                   "nu" : 1.5,
                   "max_iter_lfbgs": 50000,
                   "optimizer_kernel":'fmin_l_bfgs_b', #'fmin_l_bfgs_b', #monte_carlo', #'fmin_l_bfgs_b',
-                  "diff_evol_func": None,
+                  "diff_evol_func": 'mc',
                   "n_restart_kernel_optimizer":9,
                   "distance_conv_tol": 0.01
                   }

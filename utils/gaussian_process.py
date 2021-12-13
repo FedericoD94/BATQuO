@@ -17,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 import random
 import dill
 import warnings
+import tensorflow_probability as tfp
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
 
@@ -256,9 +257,16 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
     def pick_hyperparameters(self, N_points, bounds_elle, bounds_sigma):
         ''' Generates array of (N_points,2) random hyperaparameters inside given bounds
         '''
+        '''
         elle = np.random.uniform(low = bounds_elle[0], high=bounds_elle[1], size=(N_points,))
         sigma = np.random.uniform(low = bounds_sigma[0], high=bounds_sigma[1], size=(N_points,))
         hyper_params = list(zip(elle,sigma))
+        
+        lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
+        idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
+        best_params = hyper_params[idx_max_values]
+        '''
+        hyper_params = tfp.mcmc.SliceSampler(self.log_marginal_likelihood, num_results=N_points)
         
         return hyper_params
         
@@ -371,11 +379,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         if method == 'DIFF-EVOL':
             if DEFAULT_PARAMS['diff_evol_func'] == 'mc':
-                hyper_params = np.array(self.pick_hyperparameters(500, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
-                lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
-                idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
-                best_params = hyper_params[idx_max_values]
-                
+                best_params = np.array(self.pick_hyperparameters(50, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
                 diff_evol_args = (self, -1, best_params)
                 fun = self.mc_acq_func
             else:

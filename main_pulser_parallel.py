@@ -12,7 +12,7 @@ np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 
 ### PARAMETERS
-depth = 1#int(sys.argv[1])
+depth = 1 #int(sys.argv[1])
 Nwarmup = 20
 Ntot = 200
 Nbayes = Ntot-Nwarmup

@@ -12,3 +12,5 @@ scipy==1.7.1
 tqdm==4.62.3
 python==3.7.10
 dill==0.3.4
+tensorflow==2.7.0
+tensorflow_probability==0.15.0

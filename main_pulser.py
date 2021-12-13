@@ -13,9 +13,9 @@ np.set_printoptions(precision = 4, suppress = True)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 ### TRAIN PARAMETERS
-depth = 2
-Nwarmup = 10
-Ntot = 100
+depth = 
+Nwarmup = 20
+Ntot = 200
 Nbayes = Ntot-Nwarmup
 method = 'DIFF-EVOL'
 param_range = [100, 3000]   # extremes where to search for the values of gamma and beta
@@ -30,7 +30,7 @@ qaoa = qaoa_pulser(depth, param_range, pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
 ### CREATE GP 
-kernel =  Matern(length_scale=DEFAULT_PARAMS['initial_length_scale'], 
+kernel =  Matern(length_scale=np.ones(depth*2), 
                 length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], 
                 nu=DEFAULT_PARAMS['nu'])*ConstantKernel(DEFAULT_PARAMS['initial_length_scale'], 
                                         constant_value_bounds = DEFAULT_PARAMS['constant_bounds'])
@@ -71,7 +71,7 @@ gp.fit(X_train, y_train)
 ### STARTS PLOTTING THE DATA
 data_file_name = file_name + '.dat'
 data = [[i] + x + [y_train[i]] + data_train[i] +
-                    [gp.kernel_.get_params()['k1__length_scale'],
+                    gp.kernel_.get_params()['k1__length_scale'].tolist() +[
                     gp.kernel_.get_params()['k2__constant_value'], 0, 0, 0, 0, 0, 0, 0
                     ] for i, x in enumerate(X_train)]
 format = '%3d ' + 2*depth*'%6d ' + (len(data[0]) - 1 - 2*depth)*'%4.4f '
@@ -87,7 +87,7 @@ for i in range(Nbayes):
     bayes_time = time.time() - start_time
     y_next_point, var, fid, fid_exact, sol_ratio, _, _ = qaoa.apply_qaoa(next_point)
     qaoa_time = time.time() - start_time - bayes_time
-    corr_length = gp.kernel_.get_params()['k1__length_scale']
+    corr_length = gp.kernel_.get_params()['k1__length_scale'].tolist()
     constant_kernel = gp.kernel_.get_params()['k2__constant_value']
     #if np.abs(np.log(np.abs(0.01-corr_length))) > 8:
      #   if i == 0:
@@ -104,7 +104,7 @@ for i in range(Nbayes):
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
     
-    new_data = [i+Nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio, corr_length, constant_kernel, 
+    new_data = [i+Nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio]+ corr_length+[ constant_kernel, 
                                     std_pop_energy, avg_sqr_distances, n_it, 
                                     bayes_time, qaoa_time, kernel_time, step_time]     
 
