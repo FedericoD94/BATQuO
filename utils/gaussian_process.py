@@ -271,9 +271,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         hyper_params = tfp.mcmc.sample_chain(
           num_results=1000,
           current_state = init_state,
-          step_size = 1,
           kernel=tfp.mcmc.SliceSampler(
               target_log_prob_fn=self.log_marginal_likelihood,
+              step_size = 1,
               max_doublings=5),
           num_burnin_steps=1000-N_points)
       
