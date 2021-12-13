@@ -267,18 +267,17 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         best_params = hyper_params[idx_max_values]
         '''
         
-        init_state = np.zeros(2) #depends on the number of hyperparams
-        hyper_params = tfp.mcmc.sample_chain(
-          num_results=1000,
+        init_state = np.zeros(3) #depends on the number of hyperparams
+        samples = tfp.mcmc.sample_chain(
+          num_results=N_points,
           current_state = init_state,
           kernel=tfp.mcmc.SliceSampler(
               target_log_prob_fn=self.log_marginal_likelihood,
               step_size = 1,
               max_doublings=5),
           num_burnin_steps=1000-N_points)
-      
-        hyper_params = tfp.mcmc.SliceSampler(self.log_marginal_likelihood, num_results=N_points)
-        
+              
+        hyper_params = samples.numpy()
         return hyper_params
         
     def mc_acq_func(self, x, *args):
