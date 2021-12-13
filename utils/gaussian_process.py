@@ -277,6 +277,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
               max_doublings=5),
           num_burnin_steps=1000-N_points)
               
+        print(samples)
+        exit()
         hyper_params = samples.numpy()
         return hyper_params
         
