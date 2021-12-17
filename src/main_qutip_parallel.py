@@ -33,7 +33,7 @@ average_connectivity = args.average_connectivity
 ### PARAMETERS
 nbayes = args.nbayes
 method = 'DIFF-EVOL'
-param_range = [0.01, np.pi]   # extremes where to search for the values of gamma and beta
+param_range = np.array([[0.01, np.pi], [0.01, np.pi]])   # extremes where to search for the values of gamma and beta
 
 global_time = time.time()
 white_spaces = " " * (5 * 2 * depth)
@@ -80,11 +80,13 @@ data = []
 # kernel = ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2))
 kernel = ConstantKernel(1) * Matern(length_scale=0.11, length_scale_bounds=(0.01, 100), nu=1.5)
 gp = MyGaussianProcessRegressor(kernel=kernel,
-                                optimizer='fmin_l_bfgs_b', #fmin_l_bfgs_bor differential_evolution
+                                optimizer=None, #fmin_l_bfgs_bor differential_evolution
                                 #optimizer='differential_evolution', #fmin_l_bfgs_bor
-                                param_range=param_range,
+                                angles_bounds=param_range,
                                 n_restarts_optimizer=0,
-                                alpha=1e-8)
+                                gtol=1e-6,
+                                max_iter=1e4
+                                )
 
 X_train, y_train = qaoa.generate_random_points(nwarmup, depth, param_range)
 gp.fit(X_train, y_train)
@@ -106,7 +108,7 @@ print('Training ...')
 
 for i in range(nbayes):
     start_time = time.time()
-    next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(depth, method)
+    next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(method)
     fin_state, mean_energy, variance, fidelity_tot = qaoa.quantum_algorithm(next_point)
     bayes_time = time.time() - start_time
     y_next_point = mean_energy
