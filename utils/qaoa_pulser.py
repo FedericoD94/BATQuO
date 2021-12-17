@@ -11,16 +11,18 @@ import random
 from qutip import *
 from scipy.stats import qmc
 
+np.random.seed(DEFAULT_PARAMS['seed'])
+random.seed(DEFAULT_PARAMS['seed'])
 
 class qaoa_pulser(object):
 
-    def __init__(self, depth, param_range, pos, quantum_noise = None):
+    def __init__(self, depth, angles_bounds, pos, quantum_noise = None):
         self.C_6_over_h = 5008713.0  #copied from Pulser/pulser/devices/_device_datacls.py / on github
         self.omega = 1.
         self.delta = 1.
         self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
         self.depth = depth
-        self.param_range = param_range
+        self.angles_bounds = angles_bounds
         self.G = self.pos_to_graph(pos)
         self.solution = self.classical_solution()
         self.Nqubit = len(self.G)
@@ -204,8 +206,8 @@ class qaoa_pulser(object):
         
         hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = DEFAULT_PARAMS['seed'])
         X =  hypercube_sampler.random(N_points)
-        l_bounds = np.repeat(self.param_range[0], 2*self.depth)
-        u_bounds = np.repeat(self.param_range[1], 2*self.depth)
+        l_bounds = np.repeat(self.angles_bounds[:,0], self.depth)
+        u_bounds = np.repeat(self.angles_bounds[:,1], self.depth)
         X = qmc.scale(X, l_bounds, u_bounds).astype(int)
         X = X.tolist()
         for x in X:
@@ -238,7 +240,9 @@ class qaoa_pulser(object):
         if self.quantum_noise is not None:
             sim.add_config(self.noise_config)
         results = sim.run()
-        count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots']) #sample from the state vector
+        #np.random.seed(28)
+
+        count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
         return count_dict, results.states
 
     def plot_final_state_distribution(self, C):
@@ -263,21 +267,23 @@ class qaoa_pulser(object):
         Plot energy landscape at p=1 (default) or at p>1 if you give the previous parameters in
         the fixed_params argument
         '''
-
-        lin = np.linspace(self.param_range[0],self.param_range[1], num_grid)
+    
+        lin_gamma = np.linspace(self.angles_bounds[0][0],self.angles_bounds[0][1], num_grid)
+        lin_beta = np.linspace(self.angles_bounds[0][1],self.angles_bounds[1][1], num_grid)
         Q = np.zeros((num_grid, num_grid))
         Q_params = np.zeros((num_grid, num_grid, 2))
-        for i, gamma in enumerate(lin):
-            for j, beta in enumerate(lin):
+        for i, gamma in enumerate(lin_gamma):
+            for j, beta in enumerate(lin_beta):
                 if fixed_params is None:
                     params = [gamma, beta]
                 else:
                     params = fixed_params + [gamma, beta]
-                Q[j, i] = self.expected_energy(params)
+                a = self.apply_qaoa(params)
+                Q[j, i] = a[0]
                 Q_params[j,i] = np.array([gamma, beta])
 
 
-        plt.imshow(Q, origin = 'lower', extent = [self.param_range[0],self.param_range[1],self.param_range[0],self.param_range[1]])
+        plt.imshow(Q, origin = 'lower', extent = [item for sublist in self.angles_bounds for item in sublist])
         plt.title('Grid Search: [{} x {}]'.format(num_grid, num_grid))
         plt.xticks(fontsize = 15)
         plt.yticks(fontsize = 15)
@@ -346,7 +352,6 @@ class qaoa_pulser(object):
 
     def apply_qaoa(self, params, show = False):
         C, evol= self.quantum_loop(params)
-        
         energy = self.expected_energy(C)
         expected_variance = self.expected_variance(C, energy)
         fidelity_sampled = self.fidelity_gs_sampled(C)

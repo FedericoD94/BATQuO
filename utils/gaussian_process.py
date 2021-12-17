@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 import random
 import dill
 import warnings
-import tensorflow_probability as tfp
+import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
 
@@ -25,13 +25,13 @@ from sklearn.exceptions import ConvergenceWarning
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
-    def __init__(self, param_range, gtol, max_iter, *args, **kwargs):
+    def __init__(self, angles_bounds, gtol, max_iter, *args, **kwargs):
         '''Initializes gaussian process class
         
         The class also inherits from Sklearn GaussianProcessRegressor
         Attributes for MYgp
         --------
-        param_range : range of the angles beta and gamma
+        angles_bounds : range of the angles beta and gamma
         
         gtol: tolerance of convergence for the optimization of the kernel parameters
         
@@ -48,7 +48,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         super().__init__(alpha = alpha, *args, **kwargs)
         self.max_iter = max_iter
         self.gtol = gtol
-        self.param_range = param_range
+        self.angles_bounds = angles_bounds
         self.X = []
         self.Y = []
         self.x_best = 0
@@ -60,7 +60,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         Returns a dictionary of infos on the  gp to print 
         '''
         info ={}
-        info['param_range'] = self.param_range
+        info['param_range'] = self.angles_bounds
         info['acq_fun_optimization_max_iter'] = self.max_iter
         info['seed'] = self.seed
         info['gtol'] = self.gtol
@@ -73,8 +73,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return info
         
     def print_info(self, f):
-        f.write(f'parameters range: {self.param_range}\n')
-        f.write(f'acq_fun_optimization_max_iter: {self.param_range}\n')
+        f.write(f'parameters range: {self.angles_bounds}\n')
+        f.write(f'acq_fun_optimization_max_iter: {self.optimizer}\n')
         f.write(f'seed: {self.seed}\n')
         f.write(f'tol opt kernel: {self.gtol}\n')
         f.write(f'energy noise alpha 1/sqrt(N): {self.alpha}\n')
@@ -117,7 +117,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 #                print("BBBBB")
  #               exit()                    
             theta_opt, func_min = opt_res.x, opt_res.fun
-            print(np.exp(theta_opt), func_min)
 
 
 
@@ -142,6 +141,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             theta_opt, func_min = self.optimizer(obj_func,
                                                  initial_theta,
                                                  bounds=bounds)
+        elif self.optimizer is None:
+            theta_opt = initial_theta
+            func_min = 0
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
         return theta_opt, func_min
@@ -177,49 +179,57 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         
         super().fit(self.X, self.Y)
 
-    def my_rescaler(self, x, min_old, max_old, min_new, max_new):
-        '''Rescales one or more than one point(s) at a time 
-        
-        Attributes
-        ---------
-        x: point(s)
-        min_old, max_old: the current param range of x
-        min_new, max_new: the next param range of x
-        '''
-        norm = []
-        if isinstance(x[0], float) or isinstance(x[0], int):
-            for i in x:
-                norm.append(min_new + (max_new - min_new)/(max_old - min_old)*(i - min_old))
-        else:
-            for i in x:
-                norm.append([min_new + (max_new - min_new)/(max_old - min_old)*(j - min_old) for j in i])
+    def scale_down(self, point):
+        'Rescales a(many) point(s) from angles bounds to [0,1]'
 
+        min_gamma, max_gamma=self.angles_bounds[0]
+        min_beta,  max_beta = self.angles_bounds[1]
+        
+        norm = []
+        if isinstance(point[0], float) or isinstance(point[0], int):
+            for a,i in enumerate(point):
+                if a%2 == 0:
+                    norm.append(1/(max_gamma - min_gamma)*(i - min_gamma))
+                else:
+                    norm.append(1/(max_beta - min_beta)*(i - min_beta))
+                    
+        else:
+            for x in point:
+                b = []
+                for a,i in enumerate(x):
+                    if a%2 == 0:
+                        b.append(1/(max_gamma - min_gamma)*(i - min_gamma))
+                    else:
+                        b.append(1/(max_beta - min_beta)*(i - min_beta))
+                norm.append(b)
+                
         return norm
 
-    def scale_down(self, x):
-        'Rescales a(many) point(s) from param range to [0,1]'
 
-        min_old=self.param_range[0]
-        max_old=self.param_range[1]
-        min_new=0
-        max_new=1
+    def scale_up(self, point):
+        'Rescales a(many)point(s) from [0,1] to angles bounds'
 
-        x = self.my_rescaler(x, min_old, max_old, min_new, max_new)
-
-        return x
-
-
-    def scale_up(self, x):
-        'Rescales a(many)point(s) from [0,1] to param range'
-
-        min_old=0
-        max_old=1
-        min_new=self.param_range[0]
-        max_new=self.param_range[1]
-
-        x = self.my_rescaler(x, min_old, max_old, min_new, max_new)
-
-        return x
+        min_gamma, max_gamma=self.angles_bounds[0]
+        min_beta,  max_beta = self.angles_bounds[1]
+        
+        norm = []
+        if isinstance(point[0], float) or isinstance(point[0], int):
+            for a,i in enumerate(point):
+                if a%2 == 0:
+                    norm.append(min_gamma + i*(max_gamma - min_gamma))
+                else:
+                    norm.append(min_beta + i*(max_beta - min_beta))
+        else:
+            for x in point:
+                b = []
+                for a,i in enumerate(x):
+                    if a%2 == 0:
+                        b.append(round(min_gamma + i*(max_gamma - min_gamma)))
+                    else:
+                        b.append(round(min_beta + i*(max_beta - min_beta)))
+                norm.append(b)
+                
+        return norm
 
     def get_best_point(self):
         '''Return the current best point with its energy and position'''
@@ -244,13 +254,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         if isinstance(x[0], float):
             x = np.reshape(x, (1, -1))
         f_x, sigma_x = self.predict(x, return_std=True) 
+    
         f_prime = self.y_best #current best value
         
         #Ndtr is a particular routing in scipy that computes the CDF in half the time
         cdf = ndtr((f_prime - f_x)/sigma_x)
         pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x**2))
         alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
-        
         return sign*alpha_function
         
         
@@ -266,20 +276,22 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
         best_params = hyper_params[idx_max_values]
         '''
-        
-        init_state = np.zeros(3) #depends on the number of hyperparams
-        samples = tfp.mcmc.sample_chain(
-          num_results=N_points,
-          current_state = init_state,
-          kernel=tfp.mcmc.SliceSampler(
-              target_log_prob_fn=self.log_marginal_likelihood,
-              step_size = 1,
-              max_doublings=5),
-          num_burnin_steps=1000-N_points)
-              
-        print(samples)
-        exit()
-        hyper_params = samples.numpy()
+
+        nsteps, nwalkers, ndim = 100, 10, len(self.kernel_.theta)
+        start = np.random.uniform(0.1,1,(nwalkers,ndim)) 
+
+        sampler = zeus.EnsembleSampler(nwalkers, ndim, self.log_marginal_likelihood)
+        print("start sampli")
+        sampler.run_mcmc(start, nsteps)
+        print("end sampli")
+        hyper_params = sampler.get_chain(flat=True)[:N_points]
+        print("hhhh")
+        print(hyper_params)
+#         try:
+#             positive_hyper_params = hyper_params[hyper_params[:,0] > 0][:N_points]
+#         except:
+#              positive_hyper_params = hyper_params[hyper_params[:,0] > 0]
+#              print('Only {} hyper_params where selected'.format(len(positive_hyper_params)))
         return hyper_params
         
     def mc_acq_func(self, x, *args):
