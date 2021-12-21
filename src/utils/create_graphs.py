@@ -52,15 +52,19 @@ def create_graph_usecase_insurance(n_customers: int,
     creates a graph for the portfolio renewal usecase of Leithà
     '''
 
+    if type(previous_premiums) == list:
+        previous_premiums = np.array(previous_premiums)
+    if type(renewal_ratios_bins) == list:
+        renewal_ratios_bins = np.array(renewal_ratios_bins)
     if type(acceptance_probabilities) == list:
         acceptance_probabilities = np.array(acceptance_probabilities)
-        
-    penalty_terms = #TODO
 
     # check data dimensions
     assert len(acceptance_probabilities) == n_customers; f'there should {n_customers*n_renewal_ratios_bins} acceptance_probabilities'
     assert len(acceptance_probabilities[0]) == n_renewal_ratios_bins; f'there should {n_customers*n_renewal_ratios_bins} acceptance_probabilities'
     assert np.all(acceptance_probabilities.sum(axis=1)); 'acceptance_probabilities are not summing to 1 for at least one customer'
+    
+    penalty_terms = 1 + np.array(previous_premiums)*np.sum(acceptance_probabilities*previous_premiums.reshape((3, 1)),axis=1)
     
     # build unweighted graph  
     G = nx.Graph()
