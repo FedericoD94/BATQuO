@@ -11,7 +11,7 @@ Open the terminal and:
 - Install a poetry virtual environment: ```poetry install```
 - Look at the available arguments (```poetry run python src/main_qutip.py --help```) and run the program, e.g.: ```poetry run python src/main_qutip.py --num_nodes 6 --p 2```
 
-NOTE: In order to install the poetry environment you **need Python >= 3.7.1 and < 3.8** on your computer, in order to make [Pulser](https://pypi.org/project/pulser/) work properly. If you don't have a Python version satisfying these requirements on your compute r, use Docker or Anaconda.
+NOTE: In order to install the poetry environment you **need Python >= 3.7.1 and < 3.8** on your computer, in order to make [Pulser](https://pypi.org/project/pulser/) work properly. If you don't have a Python version satisfying these requirements on your computer, use Docker or Anaconda.
 
 ### Docker
 
