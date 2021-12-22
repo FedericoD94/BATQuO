@@ -19,6 +19,7 @@ pulser = "0.3.2"
 qiskit = "0.31.0"
 tensorflow = "2.7.0"
 tensorflow-probability = "0.15.0"
+zeus-mcmc = "^2.4.1"
 
 [tool.poetry.scripts]
 main = "src.main_qutip:main"
