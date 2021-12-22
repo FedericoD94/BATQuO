@@ -1,10 +1,11 @@
 FROM python:3.7.9-slim-buster as base
 
 # leitha Proxy specifics
-ENV http_proxy $http_proxy
-ENV https_proxy $http_proxy
-ENV HTTP_PROXY $http_proxy
-ENV HTTPS_PROXY $http_proxy
+ARG proxy
+ENV http_proxy $proxy
+ENV https_proxy $proxy
+ENV HTTP_PROXY $proxy
+ENV HTTPS_PROXY $proxy
 ENV no_proxy gitlab-leitha.servizi.gr-u.it
 ENV profile_active local
 
@@ -28,7 +29,7 @@ RUN pip install "poetry==$POETRY_VERSION"
 
 # install requirements using poetry
 WORKDIR /qaoa-pipeline
-COPY poetry.lock pyproject.toml ./
+COPY pyproject.toml poetry.lock ./
 RUN poetry install
 
 # install the src as package as last thing to leverage Docker cache

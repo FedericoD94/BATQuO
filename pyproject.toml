@@ -17,6 +17,8 @@ matplotlib = "3.4.3"
 qutip = "4.6.2"
 pulser = "0.3.2"
 qiskit = "0.31.0"
+tensorflow = "2.7.0"
+tensorflow-probability = "0.15.0"
 
 [tool.poetry.scripts]
 main = "src.main_qutip:main"
