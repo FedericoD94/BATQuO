@@ -69,14 +69,14 @@ def create_graph_usecase_insurance(n_customers: int,
     # build unweighted graph  
     G = nx.Graph()
     for c in range(n_customers):
-        tmp_circular_G = nx.cycle_graph(n_renewal_ratios_bins)
-        tmp_circular_G = nx.relabel_nodes(tmp_circular_G, {n: (c,n) for n in tmp_circular_G.nodes})
-        G = nx.compose(G,tmp_circular_G)
+        tmp_G = nx.complete_graph(n_renewal_ratios_bins)
+        tmp_G = nx.relabel_nodes(tmp_G, {n: (c,n) for n in tmp_G.nodes})
+        G = nx.compose(G,tmp_G)
 
     # add node weights
     for n,d in G.nodes(data=True):
         i,j = n
-        d['weight'] = acceptance_probabilities[i][j] * (1 + previous_premiums[i] * renewal_ratios_bins[j]) + 2 * penalty_terms[i]
+        d['weight'] = acceptance_probabilities[i][j] * (1 + previous_premiums[i] * renewal_ratios_bins[j]) - (n_renewal_ratios_bins-2) * penalty_terms[i]
 
     # add edge weights
     for u,v in G.edges:
@@ -84,7 +84,6 @@ def create_graph_usecase_insurance(n_customers: int,
         G[u][v]['weight']=penalty_terms[i]
 
     return G
-
 
 def _plot_graph(G, graph_name_file):
     num_nodes = G.number_of_nodes()
