@@ -54,6 +54,7 @@ data_names = ['iter'] + gamma_names + beta_names +['energy', 'variance', 'fideli
                     'std energies', 'average distances', 'nit', 'time opt bayes', 'time qaoa', 'time opt kernel', 'time step']
 data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
 
+
 info_file_name = file_name + '_info.txt'
 with open(info_file_name, 'w') as f:
     f.write('BAYESIAN OPTIMIZATION of QAOA \n\n')
@@ -71,7 +72,7 @@ with open(info_file_name, 'w') as f:
 X_train, y_train, data_train = qaoa.generate_random_points(Nwarmup)
 
 gp.fit(X_train, y_train)
-        
+
 ### STARTS PLOTTING THE DATA
 data_file_name = file_name + '.dat'
 data = [[i] + x + [y_train[i]] + data_train[i] +
@@ -80,6 +81,7 @@ data = [[i] + x + [y_train[i]] + data_train[i] +
                     ] for i, x in enumerate(X_train)]
 format = '%3d ' + 2*depth*'%6d ' + (len(data[0]) - 1 - 2*depth)*'%4.4f '
 np.savetxt(data_file_name, data, fmt = format)
+
 
 #### BAYESIAN OPTIMIZATION PROCEDURE
 print('Training ...')

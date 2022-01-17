@@ -54,6 +54,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         self.x_best = 0
         self.y_best = np.inf
         self.seed = DEFAULT_PARAMS["seed"]
+        self.samples = []
         
     def get_info(self):
         '''
@@ -101,6 +102,10 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         
         def obj_func_no_grad(x):
                 return  obj_func(x)[0]
+        
+        samples = []
+        def callbackF(Xi):
+            samples.append(np.exp(Xi).tolist())
                 
         if self.optimizer == "fmin_l_bfgs_b":
 #            try:
@@ -108,17 +113,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                            initial_theta,
                                            method="L-BFGS-B",
                                            jac=True,
+                                           callback = callbackF,
                                            bounds=bounds,
                                            options={'maxiter': self.max_iter,
                                                     'gtol': self.gtol}
                                            )
             _check_optimize_result("lbfgs", opt_res)
-#            except ConvergenceWarning:
-#                print("BBBBB")
- #               exit()                    
             theta_opt, func_min = opt_res.x, opt_res.fun
-
-
 
         elif self.optimizer == 'differential_evolution':
             diff_evol = DifferentialEvolutionSolver(obj_func_no_grad,
@@ -146,6 +147,9 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             func_min = 0
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
+        
+        self.samples.append(samples)
+        
         return theta_opt, func_min
 
     def fit(self, new_point, y_new_point):
@@ -491,6 +495,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         fig = plt.figure()
         num = 50
         x = np.zeros((num, num))
+        
         for i in range(num):
             for j in range(num):
                 x[j, i] = self.log_marginal_likelihood([np.log((i+0.001)*2/num),np.log((j+0.001)*10/num)])
@@ -499,6 +504,11 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         min_y = DEFAULT_PARAMS['constant_bounds'][0]
         max_y = DEFAULT_PARAMS['constant_bounds'][1]
         im = plt.imshow(x, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
+        for path in self.samples:
+            path = np.array(path)
+            print(path)
+            plt.plot(path[:,0],  path[:,1], 'o-', c = 'r')
+            plt.scatter(path[-1, 0], path[-1,1],  c = 'purple')
         plt.xlabel('Corr length')
         plt.ylabel('Constant')
         plt.colorbar(im)
