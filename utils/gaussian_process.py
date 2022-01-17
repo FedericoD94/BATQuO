@@ -20,6 +20,8 @@ import warnings
 import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
+import tensorflow_probability as tfp
+
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
@@ -283,8 +285,11 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         nsteps, nwalkers, ndim = 100, 10, len(self.kernel_.theta)
         start = np.random.uniform(0.1,1,(nwalkers,ndim)) 
-
-        sampler = zeus.EnsembleSampler(nwalkers, ndim, self.log_marginal_likelihood)
+        tfp.mcmc.SliceSampler(
+            self.log_marginal_likelihood, step_size = 0.1, max_doublings = 10,
+            experimental_shard_axis_names=None, name=None
+            )
+        #sampler = zeus.EnsembleSampler(nwalkers, ndim, self.log_marginal_likelihood)
         print("start sampli")
         sampler.run_mcmc(start, nsteps)
         print("end sampli")
