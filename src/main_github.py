@@ -17,6 +17,8 @@ from pathlib import Path
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
 from bayes_opt.event import Events
+from bayes_opt import UtilityFunction
+
     
 
 np.set_printoptions(precision=4, suppress=True)
@@ -103,18 +105,21 @@ def black_box_function(**params):
     
     return -mean_energy
 
+#utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
+
 optimizer = BayesianOptimization(
     f=black_box_function,
     pbounds=pbounds,
     random_state=seed,
 )
 
-logger = JSONLogger(path="./logs.json")
+logger = JSONLogger(path="./p_{}_nwarmup_{}_nbayes_{}.json".format(depth, nwarmup, nbayes))
 optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
+
 optimizer.maximize(
-    init_points=10,
-    n_iter=60
+    init_points=nwarmup,
+    n_iter=nbayes
 )
 
 print('end')
