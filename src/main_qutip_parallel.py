@@ -65,7 +65,7 @@ num_graph = seed
 # G = create_chair_graph(name_plot="chair")
 
 name_plot = str(seed)
-G = create_random_regular_graph(num_nodes, degree=3, seed=1, name_plot=name_plot)
+G = create_random_regular_graph(num_nodes, degree=3, seed=1)
 
 qaoa = qaoa_qutip(G, problem="MAX-CUT")
 gs_energy, gs_state, degeneracy = qaoa.gs_en, qaoa.gs_states, qaoa.deg

@@ -20,6 +20,7 @@ import warnings
 import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
+import tensorflow_probability as tfp
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
@@ -277,6 +278,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         best_params = hyper_params[idx_max_values]
         '''
 
+        '''
+            ZEUS
         nsteps, nwalkers, ndim = 100, 10, len(self.kernel_.theta)
         start = np.random.uniform(0.1,1,(nwalkers,ndim))
 
@@ -293,6 +296,20 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 #              positive_hyper_params = hyper_params[hyper_params[:,0] > 0]
 #              print('Only {} hyper_params where selected'.format(len(positive_hyper_params)))
         return hyper_params
+        '''
+        samples = tfp.mcmc.sample_chain(
+                                    num_results=1000,
+                                    current_state=dtype(1),
+                                    kernel=tfp.mcmc.SliceSampler(self.log_marginal_likelihood,
+                                                    step_size=1.0,
+                                                    max_doublings=5),
+                                    num_burnin_steps=500,
+                                    trace_fn=None,
+                                    seed=1234)
+        samples = samples[-N_points:] #taking the last N_points
+        
+        return samples
+        
 
     def mc_acq_func(self, x, *args):
         ''' Averages the value of the acq_func for different sets of hyperparameters chosen
