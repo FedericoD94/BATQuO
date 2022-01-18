@@ -18,7 +18,7 @@ def parse_command_line():
 
     parser.add_argument('--num_nodes',
                         type=int,
-                        default=5,
+                        default=6,
                         help="Number of nodes in the graph"
                         )
 
