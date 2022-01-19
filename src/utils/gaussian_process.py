@@ -21,6 +21,7 @@ import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
 import tensorflow_probability as tfp
+import tensorflow as tf
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
@@ -308,7 +309,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                     num_burnin_steps=5,
                                     trace_fn=None,
                                     seed=1234)
-        print(type(samples))
+        samples = tf.make_ndarray(samples)
         print(samples[:3])
         exit()
         samples = samples[-N_points:] #taking the last N_points
