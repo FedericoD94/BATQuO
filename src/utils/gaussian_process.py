@@ -311,8 +311,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                     seed=DEFAULT_PARAMS['seed'])
         print('end slice sampling')
         samples = samples.numpy()
-        print(samples[:3])
-        exit()
         samples = samples[-N_points:] #taking the last N_points
         
         return samples
