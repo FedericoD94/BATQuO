@@ -297,8 +297,11 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 #              print('Only {} hyper_params where selected'.format(len(positive_hyper_params)))
         return hyper_params
         '''
+        dtype = np.float32
+
         samples = tfp.mcmc.sample_chain(
                                     num_results=1000,
+                                    current_state = dtype(1)
                                     kernel=tfp.mcmc.SliceSampler(self.log_marginal_likelihood,
                                                     step_size=1.0,
                                                     max_doublings=5),
