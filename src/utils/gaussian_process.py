@@ -309,7 +309,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                     num_burnin_steps=5,
                                     trace_fn=None,
                                     seed=1234)
-        samples = tf.make_ndarray(samples)
+        samples = samples.eval()
         print(samples[:3])
         exit()
         samples = samples[-N_points:] #taking the last N_points
