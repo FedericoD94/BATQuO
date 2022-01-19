@@ -299,16 +299,17 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return hyper_params
         '''
         dtype = np.float32
-
+        print('begin slice sampling')
         samples = tfp.mcmc.sample_chain(
-                                    num_results=10,
+                                    num_results=100,
                                     current_state = np.ones(len(self.kernel_.theta)),
                                     kernel=tfp.mcmc.SliceSampler(self.log_marginal_likelihood,
                                                     step_size=1.0,
                                                     max_doublings=5),
-                                    num_burnin_steps=5,
+                                    num_burnin_steps=50,
                                     trace_fn=None,
-                                    seed=1234)
+                                    seed=DEFAULT_PARAMS['seed'])
+        print('end slice sampling')
         samples = samples.numpy()
         print(samples[:3])
         exit()
