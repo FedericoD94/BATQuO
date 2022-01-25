@@ -317,11 +317,13 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         
 
     def mc_acq_func(self, x, *args):
-        ''' Averages the value of the acq_func for different sets of hyperparameters chosen
-        (for now) by uniform sampling '''
+        ''' Averages the value of the acq_func for different sets of hyperparameters chosen by pick_hyperparameters
+        method '''
 
         hyper_params = args[-1]
         acq_func_values = []
+        print(hyper_params)
+        exit()
         for params in hyper_params:
             self.kernel.set_params(**{'k1__length_scale': params[0]})
             self.kernel.set_params(**{'k2__constant_value': params[1]})

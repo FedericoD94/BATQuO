@@ -118,6 +118,7 @@ optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
 
 optimizer.maximize(
+    acq = 'ei',
     init_points=nwarmup,
     n_iter=nbayes
 )
