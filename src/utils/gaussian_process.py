@@ -299,8 +299,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return hyper_params
         '''
         dtype = np.float32
-        print(self.kernel.get_params().keys())
-        exit()
         print('begin slice sampling')
         samples = tfp.mcmc.sample_chain(
                                     num_results=100,
@@ -325,8 +323,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         hyper_params = args[-1]
         acq_func_values = []
         for params in hyper_params:
-            self.kernel.set_params(**{'k1__length_scale': params[0]})
-            self.kernel.set_params(**{'k2__constant_value': params[1]})
+            self.kernel.set_params(**{'k1__constant_value': params[0]})
+            self.kernel.set_params(**{'k2__length_scale': params[1]})
             acq_func_values.append(self.acq_func(x, *args))
 
         return np.mean(acq_func_values)
