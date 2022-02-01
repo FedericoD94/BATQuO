@@ -6,13 +6,13 @@ DEFAULT_PARAMS = {"penalty": 2,
                   "num_grid": 20,
                   "seed" : 22,
                   "initial_length_scale" : 1,
-                  "length_scale_bounds" : (0.1, 2),
+                  "length_scale_bounds" : (0.01, 100),
                   "initial_sigma":1,
-                  "constant_bounds":(0.1, 100),
+                  "constant_bounds":(0.01, 100),
                   "nu" : 1.5,
                   "max_iter_lfbgs": 50000,
-                  "optimizer_kernel":None, #'fmin_l_bfgs_b', #monte_carlo', #'fmin_l_bfgs_b',
-                  "diff_evol_func": 'mc', #None mc = monte carlo con zeus
+                  "kernel_optimizer":'fmin_l_bfgs_b', #'fmin_l_bfgs_b', #monte_carlo', #'fmin_l_bfgs_b',
+                  "diff_evol_func":  None, #None mc = monte carlo con tensorflow probability
                   "n_restart_kernel_optimizer":9,
                   "distance_conv_tol": 0.01
                   }

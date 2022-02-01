@@ -17,16 +17,19 @@ from sklearn.preprocessing import StandardScaler
 import random
 import dill
 import warnings
-import zeus
+#import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
-import tensorflow_probability as tfp
-import tensorflow as tf
+from pathlib import Path
+
+#import tensorflow_probability as tfp
+#import tensorflow as tf
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
+    
     def __init__(self, angles_bounds, gtol, max_iter, *args, **kwargs):
         '''Initializes gaussian process class
 
@@ -46,7 +49,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                          n_restarts_optimizer (how many times the kernel opt is performed)
                          normalize_y: standard is yes
         '''
-        alpha = 1/np.sqrt(DEFAULT_PARAMS['shots'])
+        alpha = 10e-3
         super().__init__(alpha = alpha, *args, **kwargs)
         self.max_iter = max_iter
         self.gtol = gtol
@@ -56,6 +59,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         self.x_best = 0
         self.y_best = np.inf
         self.seed = DEFAULT_PARAMS["seed"]
+        self.samples = []
 
     def get_info(self):
         '''
@@ -103,23 +107,33 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         def obj_func_no_grad(x):
                 return  obj_func(x)[0]
-
+        
+                
         if self.optimizer == "fmin_l_bfgs_b":
-#            try:
+            self.samples = []
+        
+            def callbackF(Xi):
+                tupla = []
+                tupla.append(obj_func(Xi)[0])
+                tupla.append(obj_func(Xi)[1][0])
+                tupla.append(obj_func(Xi)[1][1])
+                data = np.concatenate(
+                                     ([len(self.samples)], Xi,  tupla)
+                                     )
+                self.samples.append(data)
+                
             opt_res = minimize(obj_func,
-                                           initial_theta,
-                                           method="L-BFGS-B",
-                                           jac=True,
-                                           bounds=bounds,
-                                           options={'maxiter': self.max_iter,
-                                                    'gtol': self.gtol}
+                               initial_theta,
+                               method="L-BFGS-B",
+                               jac=True,
+                               callback = callbackF,
+                               bounds=bounds,
+                               options={'maxiter': self.max_iter,
+                                        'gtol': self.gtol}
                                            )
             _check_optimize_result("lbfgs", opt_res)
-#            except ConvergenceWarning:
-#                print("BBBBB")
- #               exit()
+            self.samples = np.array(self.samples)
             theta_opt, func_min = opt_res.x, opt_res.fun
-
 
 
         elif self.optimizer == 'differential_evolution':
@@ -148,6 +162,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             func_min = 0
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
+        print('L ottimiz ritorna il valore migliore ', theta_opt)
         return theta_opt, func_min
 
     def fit(self, new_point, y_new_point):
@@ -441,17 +456,18 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                             seed = self.seed,
                                             args = diff_evol_args) as diff_evol:
                 results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
-            print("AAA")
             next_point = results.x
-            print("BBB")
         next_point = self.scale_up(next_point)
         return next_point, results.nit, average_norm_distance_vectors, std_population_energy
 
     def covariance_matrix(self):
         K = self.kernel_(self.X)
         K[np.diag_indices_from(K)] += self.alpha
-
-        return K
+        eigenvalues, eigenvectors = np.linalg.eig(K)
+        print(K)
+        print(eigenvalues)
+        
+        return K, eigenvalues
 
     def plot_covariance_matrix(self, show = True, save = False):
         K = self.covariance_matrix()
@@ -510,7 +526,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             plt.savefig('data/acq_fun_iter={}.png'.format(len(self.X), self.kernel_))
         if show:
             plt.show()
-
+    
     def plot_log_marginal_likelihood(self, show = True, save = False):
         fig = plt.figure()
         num = 50
@@ -534,3 +550,19 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         if show:
             plt.show()
 
+    def get_log_marginal_likelihood_grid(self, show = True, save = False):
+        num = 50
+        x = np.zeros((num, num))
+        min_x = DEFAULT_PARAMS['length_scale_bounds'][0]
+        max_x = DEFAULT_PARAMS['length_scale_bounds'][1]
+        min_y = DEFAULT_PARAMS['constant_bounds'][0]
+        max_y = DEFAULT_PARAMS['constant_bounds'][1]
+        ascisse = np.linspace(np.log(min_x), np.log(max_x), num = num)
+        ordinate = np.linspace(np.log(min_y), np.log(max_y), num = num)
+        for i, ascissa in enumerate(ascisse):
+            for j, ordinata in enumerate(ordinate):
+                x[i, j] = self.log_marginal_likelihood([ascissa, ordinata])
+        
+        x = np.array(x)
+        return x
+        

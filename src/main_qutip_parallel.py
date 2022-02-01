@@ -13,6 +13,7 @@ from utils.parameters import parse_command_line
 from utils.default_params import *
 import time
 from pathlib import Path
+import os
 
 np.set_printoptions(precision=4, suppress=True)
 
@@ -74,13 +75,14 @@ print(gs_energy, degeneracy, qaoa.gs_binary)
 
 DEFAULT_PARAMS["seed"] = seed + i_trial
 output_folder = Path(__file__).parents[1] / "output"
-file_name = f'p_{depth}_punti_{nwarmup + nbayes}_warmup_{nwarmup}_train_{nbayes}_trial_{i_trial}_graph_{name_plot}.dat'
+file_name = f'lfgbs_p_{depth}_punti_{nwarmup + nbayes}_warmup_{nwarmup}_train_{nbayes}_trial_{i_trial}_graph_{name_plot}.dat'
 data = []
 ### CREATE GP AND FIT TRAINING DATA
 # kernel = ConstantKernel(1)*RBF(0.2, length_scale_bounds = (1E-1, 1E2))
-kernel = ConstantKernel(1) * Matern(length_scale=0.11, length_scale_bounds=(0.01, 100), nu=1.5)
+kernel = ConstantKernel(1.1, constant_value_bounds = DEFAULT_PARAMS['constant_bounds']) *\
+             Matern(length_scale=0.11, length_scale_bounds=DEFAULT_PARAMS['length_scale_bounds'], nu=1.5)
 gp = MyGaussianProcessRegressor(kernel=kernel,
-                                optimizer=None, #fmin_l_bfgs_bor differential_evolution
+                                optimizer= DEFAULT_PARAMS['kernel_optimizer'], #fmin_l_bfgs_bor differential_evolution
                                 #optimizer='differential_evolution', #fmin_l_bfgs_bor
                                 angles_bounds=param_range,
                                 n_restarts_optimizer=0,
@@ -107,6 +109,7 @@ for i_tr, x in enumerate(X_train):
 print('Training ...')
 
 for i in range(nbayes):
+    
     start_time = time.time()
     next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step(method)
     fin_state, mean_energy, variance, fidelity_tot = qaoa.quantum_algorithm(next_point)
@@ -141,17 +144,19 @@ for i in range(nbayes):
     format_list[0] = '% 4d '
     format_list[-5] = '% 8d '
     fmt_string = "".join(format_list)
-    np.savetxt(output_folder / file_name,
-               data,
-               fmt=fmt_string,
-               header="".join(results_structure)
-               )
+    
+    folder_name = file_name.split('.')[0]
+    folder = os.path.join(output_folder, folder_name)
+    os.makedirs(folder, exist_ok = True)
+    np.savetxt(folder +"/"+ file_name, data, fmt = fmt_string, header  ="".join(results_structure))
+    np.savetxt(folder +"/"+ "step_{}_kernel_opt.dat".format(i), gp.samples)
+    np.savetxt(folder +"/"+ "step_{}_likelihood_grid.dat".format(i), gp.get_log_marginal_likelihood_grid())
 
 best_x, best_y, where = gp.get_best_point()
 
 data.append(data[where])
 
-np.savetxt(output_folder / file_name,
+np.savetxt(folder +"/"+ file_name,
            np.array(data),
            fmt=fmt_string,
            header="".join(results_structure)
