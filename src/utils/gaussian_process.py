@@ -22,8 +22,9 @@ import warnings
 from sklearn.exceptions import ConvergenceWarning
 from pathlib import Path
 
-#import tensorflow_probability as tfp
-#import tensorflow as tf
+import tensorflow as tf
+
+import tensorflow_probability as tfp
 
 
 # Allows to change max_iter (see cell below) as well as gtol.
@@ -49,7 +50,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                          n_restarts_optimizer (how many times the kernel opt is performed)
                          normalize_y: standard is yes
         '''
-        alpha = 10e-3
+        alpha = 10e-10
         super().__init__(alpha = alpha, *args, **kwargs)
         self.max_iter = max_iter
         self.gtol = gtol
@@ -316,14 +317,23 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         dtype = np.float32
         print('begin slice sampling')
         samples = tfp.mcmc.sample_chain(
-                                    num_results=100,
-                                    current_state = np.ones(len(self.kernel_.theta)),
-                                    kernel=tfp.mcmc.SliceSampler(self.log_marginal_likelihood,
-                                                    step_size=1.0,
-                                                    max_doublings=5),
-                                    num_burnin_steps=50,
-                                    trace_fn=None,
-                                    seed=DEFAULT_PARAMS['seed'])
+                                        num_results=100,
+                                        current_state=np.ones(len(self.kernel_.theta)),
+                                        kernel=tfp.mcmc.SliceSampler(
+                                            self.log_marginal_likelihood,
+                                            step_size=1.0,
+                                            max_doublings=5),
+                                        num_burnin_steps=50,
+                                        trace_fn=None), 
+        # tfd = tfp.distributions
+# 
+#         kernel = tfp.mcmc.SliceSampler(tfd.Distribution(self.log_marginal_likelihood), step_size=1.0,  max_doublings=5)
+#         state = tf.constant([1,1], dtype = dtype)
+#         extra = kernel.bootstrap_results(state)
+#         samples = []
+#         for _ in range(10):
+#           state, extra = kernel.one_step(state, extra)
+#           samples.append(state)
         print('end slice sampling')
         samples = samples.numpy()
         samples = samples[-N_points:] #taking the last N_points
@@ -561,7 +571,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         ordinate = np.linspace(np.log(min_y), np.log(max_y), num = num)
         for i, ascissa in enumerate(ascisse):
             for j, ordinata in enumerate(ordinate):
-                x[i, j] = self.log_marginal_likelihood([ascissa, ordinata])
+                x[j, i] = self.log_marginal_likelihood([ascissa, ordinata])
         
         x = np.array(x)
         return x

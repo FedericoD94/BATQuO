@@ -37,7 +37,7 @@ method = 'DIFF-EVOL'
 param_range = np.array([[0.01, np.pi], [0.01, np.pi]])   # extremes where to search for the values of gamma and beta
 
 global_time = time.time()
-white_spaces = " " * (5 * 2 * depth)
+white_spaces = " " * (6 * 2 * depth)
 results_structure = ['iter ',
                      white_spaces + 'point' + white_spaces,
                      'energy   ',
@@ -119,6 +119,7 @@ for i in range(nbayes):
     fidelity = fidelity_tot
     corr_length = gp.kernel_.get_params()['k2__length_scale']
     constant_kernel = gp.kernel_.get_params()['k1__constant_value']
+    log_marginal_likelihood_grid = gp.get_log_marginal_likelihood_grid()
     gp.fit(next_point, y_next_point)
     kernel_time = time.time() - start_time - qaoa_time - bayes_time
     step_time = time.time() - start_time
@@ -150,7 +151,7 @@ for i in range(nbayes):
     os.makedirs(folder, exist_ok = True)
     np.savetxt(folder +"/"+ file_name, data, fmt = fmt_string, header  ="".join(results_structure))
     np.savetxt(folder +"/"+ "step_{}_kernel_opt.dat".format(i), gp.samples)
-    np.savetxt(folder +"/"+ "step_{}_likelihood_grid.dat".format(i), gp.get_log_marginal_likelihood_grid())
+    np.savetxt(folder +"/"+ "step_{}_likelihood_grid.dat".format(i), log_marginal_likelihood_grid)
 
 best_x, best_y, where = gp.get_best_point()
 
