@@ -33,5 +33,5 @@ pos = np.array([[0., 0.], [0, 10], [10,0], [10,10], [10,20],[20,10]])
 qaoa = qaoa_pulser(depth, angles_bounds, pos, quantum_noise)
 gs_en, gs_state, deg = qaoa.calculate_physical_gs()
 
-params = [1000,1000]
+params = [2397  ,  155 ,  1109,   2513 ,   815,   1787]
 results = qaoa.apply_qaoa(params, show = True)

@@ -17,7 +17,6 @@ from sklearn.preprocessing import StandardScaler
 import random
 import dill
 import warnings
-#import zeus
 # warnings.filterwarnings("error")
 from sklearn.exceptions import ConvergenceWarning
 #import tensorflow_probability as tfp

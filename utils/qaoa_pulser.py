@@ -231,7 +231,7 @@ class qaoa_pulser(object):
             seq.add(pulse_1, 'ch0')
             seq.add(pulse_2, 'ch0')
         seq.measure('ground-rydberg')
-        simul = Simulation(seq, sampling_rate=0.1)
+        simul = Simulation(seq, sampling_rate=0.01)
     
         return simul
     
