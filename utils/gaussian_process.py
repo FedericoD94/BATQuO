@@ -301,6 +301,35 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 #              positive_hyper_params = hyper_params[hyper_params[:,0] > 0]
 #              print('Only {} hyper_params where selected'.format(len(positive_hyper_params)))
         return hyper_params
+<<<<<<< Updated upstream:utils/gaussian_process.py
+=======
+        '''
+        dtype = np.float64 AGGAGAGAGAGAGAGAGAGAGA
+        print('begin slice sampling')
+        samples = tfp.mcmc.sample_chain(
+                                        num_results=100,
+                                        current_state=np.ones(len(self.kernel_.theta)),
+                                        kernel=tfp.mcmc.SliceSampler(
+                                            self.log_marginal_likelihood,
+                                            step_size=1.0,
+                                            max_doublings=5),
+                                        num_burnin_steps=50,
+                                        trace_fn=None), 
+        # tfd = tfp.distributions
+# 
+#         kernel = tfp.mcmc.SliceSampler(tfd.Distribution(self.log_marginal_likelihood), step_size=1.0,  max_doublings=5)
+#         state = tf.constant([1,1], dtype = dtype)
+#         extra = kernel.bootstrap_results(state)
+#         samples = []
+#         for _ in range(10):
+#           state, extra = kernel.one_step(state, extra)
+#           samples.append(state)
+        print('end slice sampling')
+        samples = samples.numpy()
+        samples = samples[-N_points:] #taking the last N_points
+        
+        return samples
+>>>>>>> Stashed changes:src/utils/gaussian_process.py
         
     def mc_acq_func(self, x, *args):
         ''' Averages the value of the acq_func for different sets of hyperparameters chosen
