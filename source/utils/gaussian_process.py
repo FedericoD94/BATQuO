@@ -327,8 +327,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         avg_norm_dist_vect: condition of convergence for the positions 
         std_pop_energy: condition of convergence for the energies
         '''
-        depth = int(len(self.X[0])/2)
-
         samples = []
         acqfunvalues = []
 
@@ -336,86 +334,23 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             samples.append(Xi.tolist())
             acqfunvalues.append(self.acq_func(Xi, self, 1)[0])
 
-        if method == 'GRID_SEARCH':
-            if depth >1:
-                print('PLS No grid search with p > 1')
-                raise Error
-            X= np.linspace(0, 1, 50, dtype = int)
-            Y= np.linspace(0,1, 50, dtype = int)
-            X_test = list(product(X, Y))
-
-
-            alpha = self.acq_func(X_test, self, 1)
-            #argmax is a number between 0 and N_test**-1 telling us where is the next point to sample
-            argmax = np.argmax(np.round(alpha, 3))
-            next_point = X_test[argmax]
-            
-        if method == 'HMC':
-            path_length = .2
-            step_size = .02
-            epsilon = .001
-            epochs = 10
-            hmc_samples, traj, success= HMC(func = self.acq_func,
-                                            path_len=path_length,
-                                            step_size=step_size,
-                                            epsilon = epsilon,
-                                            epochs=epochs)
-            cols = int(len(init_pos)*4)
-            rows = int((path_length/step_size+1)*(epochs))
-            traj_to_print = np.reshape(traj, (rows, cols))
-            np.savetxt('Trajectories.dat',
-                        traj_to_print,
-                        header='[q_i, q_f],  [p_i, p_f],  self.acq_func(q1), dVdQ_1, dVdq_2',
-                        fmt='  %1.3f')
-
-            accepted_samples = hmc_samples[success == True]
-            if len(accepted_samples) == 0:
-                print('Warning: there where 0 accepted samples. Restarting with new values')
-                next_point = 0
-
-            if accepted_samples.shape[0] > 0:
-                next_point = np.mean(accepted_samples[-10:], axis = 0)
-            else:
-                next_point = [0,0]
-
-            if epochs< 100:
-                plot_trajectories(self.acq_func, traj, success, save = True)
-
-        if method == 'FD':
-            l_rate = 0.001
-            if init_pos is None:
-                print('You need to pass an initial point if using Finite differences')
-                raise Error
-            gd_params = gradient_descent(self.acq_func,
-                                        l_rate,
-                                        init_pos,
-                                        max_iter = 400,
-                                        method = method,
-                                        verbose = 1)
-            next_point = gd_params[-1][:2]
-
         if method == 'SCIPY':
             if init_pos is None:
                 print('You need to pass an initial point if using scipy')
                 raise Error
             results = minimize(self.acq_func,
-                                bounds = [(0,1), (0,1)]*depth,
+                                bounds = [(0,1), (0,1)]*self.depth,
                                 x0 = init_pos,
                                 args = (self, -1))
             next_point = results.x
 
         if method == 'DIFF-EVOL':
-            if DEFAULT_PARAMS['diff_evol_func'] == 'mc':
-                best_params = np.array(self.pick_hyperparameters(50, DEFAULT_PARAMS['length_scale_bounds'], DEFAULT_PARAMS['constant_bounds']))
-                diff_evol_args = (self, -1, best_params)
-                fun = self.mc_acq_func
-            else:
-                fun = self.acq_func
-                diff_evol_args = (self, -1)
+            fun = self.acq_func
+            diff_evol_args = (self, -1)
             with DifferentialEvolutionSolver(fun,
-                                            bounds = [(0,1), (0,1)]*depth,
+                                            bounds = [(0,1), (0,1)]*self.depth,
                                             callback = None,
-                                            maxiter = 100*depth,
+                                            maxiter = 100*self.depth,
                                             popsize = 15,
                                             tol = .001,
                                             dist_tol = DEFAULT_PARAMS['distance_conv_tol'],

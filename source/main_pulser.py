@@ -42,3 +42,4 @@ bo = Bayesian_optimization(depth,
                            )
 bo.print_info()        
 bo.init_training(nwarmup)
+bo.run_optimization()

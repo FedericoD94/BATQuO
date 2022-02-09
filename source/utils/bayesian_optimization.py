@@ -1,6 +1,7 @@
 from .qaoa_pulser import *
 from .gaussian_process import *
 import numpy as np
+import time
 
 class Bayesian_optimization():
 
@@ -31,7 +32,6 @@ class Bayesian_optimization():
         
     def print_info(self):
         self.file_name = 'p={}_warmup={}_train={}'.format(self.depth, self.nwarmup, self.nbayes)
-        data = []
         gamma_names = ['GAMMA' + str(i) + ' ' for i in range(self.depth)]
         beta_names = ['BETA' + str(i) + ' ' for i in range(self.depth)]
         data_names = ['iter'] + gamma_names + beta_names + ['energy', 
@@ -77,54 +77,49 @@ class Bayesian_optimization():
         self.gp.fit(X_train, y_train)
         
         
-        data_file_name = self.file_name + '.dat'
+        self.data_file_name = self.file_name + '.dat'
         kernel_params = np.exp(self.gp.kernel_.theta)
-        data = [[i] + x + [y_train[i]] + data_train[i] +
+        self.data = [[i] + x + [y_train[i]] + data_train[i] +
                               [kernel_params[0],
                                kernel_params[1], 0, 0, 0, 0, 0, 0, 0
                               ] for i, x in enumerate(X_train)]
-        format = '%3d ' + 2*self.depth*'%6d ' + (len(data[0]) - 1 - 2*self.depth)*'%4.4f '
-        np.savetxt(data_file_name, data, fmt = format)
+        format = '%3d ' + 2*self.depth*'%6d ' + (len(self.data[0]) - 1 - 2*self.depth)*'%4.4f '
+        np.savetxt(self.data_file_name, self.data, fmt = format)
         
-    def ciao():
+    def run_optimization(self):
         print('Training ...')
-        for i in range(Nbayes):
+        for i in range(self.nbayes):
             start_time = time.time()
-            next_point, n_it, avg_sqr_distances, std_pop_energy = gp.bayesian_opt_step()
+            next_point, n_it, avg_sqr_distances, std_pop_energy = self.gp.bayesian_opt_step()
             next_point = [int(i) for i in next_point]
     
             bayes_time = time.time() - start_time
-            y_next_point, var, fid, fid_exact, sol_ratio, _, _ = qaoa.apply_qaoa(next_point)
+            y_next_point, var, fid, fid_exact, sol_ratio, _, _ = self.qaoa.apply_qaoa(next_point)
             qaoa_time = time.time() - start_time - bayes_time
-            corr_length = gp.kernel_.get_params()['k1__length_scale']
-            constant_kernel = gp.kernel_.get_params()['k2__constant_value']
-            #if np.abs(np.log(np.abs(0.01-corr_length))) > 8:
-             #   if i == 0:
-              #      gp.kernel_.set_params(**{'k1__length_scale': data[-1][-9]})
-               #     corr_length = data[-1][-9]
-               # else:
-               #     gp.kernel_.set_params(**{'k1__length_scale': new_data[-9]})
-               #     corr_length = new_data[-9]
-            print('iteration: {}/{}  {} en: {}, fid: {}'.format(i, Nbayes, next_point, y_next_point, fid))
-            K = gp.covariance_matrix()
+            constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
+            
+            
+            print('iteration: {}/{}  {} en: {}, fid: {}'.format(i, self.nbayes, next_point, y_next_point, fid))
+            K = self.gp.covariance_matrix()
+            
             print(K)
+            
             L = np.linalg.cholesky(K)
-            gp.fit(next_point, y_next_point)
+            self.gp.fit(next_point, y_next_point)
             #gp.plot_log_marginal_likelihood(show = False, save = True)
 
     
             kernel_time = time.time() - start_time - qaoa_time - bayes_time
             step_time = time.time() - start_time
     
-            new_data = [i+Nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio, corr_length, constant_kernel, 
+            new_data = [i+self.nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio, corr_length, constant_kernel, 
                                             std_pop_energy, avg_sqr_distances, n_it, 
                                             bayes_time, qaoa_time, kernel_time, step_time]     
 
-            data.append(new_data)
-            np.savetxt(data_file_name, data, fmt = format)
-
-        best_x, best_y, where = gp.get_best_point()
-        data.append(data[where])
-        np.savetxt(data_file_name, data, fmt = format)
-        print('Best point: ' , data[where])
-        print('time: ',  time.time() - global_time)
+            self.data.append(new_data)
+            #np.savetxt(self.data_file_name, self.data, fmt = format)
+            
+        best_x, best_y, where = self.gp.get_best_point()
+        self.data.append(self.data[where])
+        #np.savetxt(self.data_file_name, self.data, fmt = format)
+        print('Best point: ' , self.data[where])
