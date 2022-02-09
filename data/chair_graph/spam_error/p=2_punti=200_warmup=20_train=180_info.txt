@@ -1,0 +1,40 @@
+BAYESIAN OPTIMIZATION of QAOA 
+
+Problem: MIS
+Cost: -Σ Z_i + 2 * Σ Z_i Z_j
+Hamiltonian: Ω Σ X_i - δ Σ Z_i + U Σ Z_i Z_j
+Mixing: Ω Σ X_i
+
+
+QAOA PARAMETERS
+-------------
+Depth: 2
+Omega: 1.0 delta: 1.0 U: [5.008713, 5.008713, 5.008713, 5.008713, 5.008713, 5.008713]
+Graph: [(0, 1), (0, 2), (1, 3), (2, 3), (3, 4), (3, 5)]
+Classical sol: {'011011': -4}
+Noise info: Options:
+----------
+Number of runs:        15
+Samples per run:       5
+Noise types:           SPAM
+SPAM dictionary:       {'eta': 0.005, 'epsilon': 0.01, 'epsilon_prime': 0.05}
+
+GAUSSIAN PROCESS PARAMETERS
+---------------
+parameters range: [100, 3000]
+acq_fun_optimization_max_iter: [100, 3000]
+seed: 22
+tol opt kernel: 1e-06
+energy noise alpha 1/sqrt(N): 0.08838834764831843
+kernel_optimizer: fmin_l_bfgs_b
+kernel info: {'k1': Matern(length_scale=1, nu=1.5), 'k2': 1**2, 'k1__length_scale': 1, 'k1__length_scale_bounds': (0.01, 100), 'k1__nu': 1.5, 'k2__constant_value': 1, 'k2__constant_value_bounds': (1e-05, 100000.0)}
+n_restart_kernel_optimizer: 9
+normalize_y: True
+
+
+BAYESIAN OPT PARAMETERS
+------------------
+Nwarmup points: 20 
+Ntraining points: 180
+FILE.DAT PARAMETERS:
+['iter', 'GAMMA0 ', 'GAMMA1 ', 'BETA0 ', 'BETA1 ', 'energy', 'variance', 'fidelity_exact', 'fidelity_sampled', 'ratio', 'corr_length ', 'const_kernel', 'std energies', 'average distances', 'nit', 'time opt bayes', 'time qaoa', 'time opt kernel', 'time step']

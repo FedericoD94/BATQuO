@@ -1,0 +1,12 @@
+La funzione di acquisizione viene chiamata nell'ordine di almeno 10^6 volte ogni volta aumentando con i P.
+
+
+Miglioramento cif:  da norm.cdf a ndtr si guadagna 8%
+Miglioramento min fun: nel calcolo della acq func cercava il minimo attuale ogni volta (perdendo 3% tempo totale) mentre è già salvato come y_best
+Miglioramento pdf: adesso è calcolata esplicitamente con miglioramento del 20% sul tempo totale!
+
+Ottimizzare chiamate ad acquisition func in differential optimization? (Tipo chiamate in contemporanea dei piu punti della popolazione?)
+
+Ottimizzare acq function:
+	--> Migliorare calcolo kernel (forse si può salvare in memoria la matrice perché siamo allo stesso punto di ottimizzazione?) (attualmente occupa 11.3 % del tempo)
+	--> Il controllo della shape dei parametri e simili richiede un 10% in validation.py chiamata dentro acq func quando ce' il predict, si può togliere? Si basta andare in gp.predict e virgolettare il check array all'inizio del metodo
