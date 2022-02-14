@@ -102,7 +102,6 @@ class Bayesian_optimization():
             print('iteration: {}/{}  {} en: {}, fid: {}'.format(i, self.nbayes, next_point, y_next_point, fid))
             K = self.gp.covariance_matrix()
             
-            print(K)
             
             L = np.linalg.cholesky(K)
             self.gp.fit(next_point, y_next_point)

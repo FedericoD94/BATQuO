@@ -254,7 +254,12 @@ class qaoa_pulser(object):
             seq.add(pulse_2, 'ch0')
         seq.measure('ground-rydberg')
         
-        simul = Simulation(seq, sampling_rate=0.1)
+        #check if sampling_rate is too small by doing rate*total_duration:
+        sampling_rate = 1
+        while sampling_rate * sum(params) < 4:
+            sampling_rate += 0.1
+        print(f'Sampling happens every: {sampling_rate *sum(params)} times')
+        simul = Simulation(seq, sampling_rate=sampling_rate)
     
         return simul
     
@@ -262,6 +267,7 @@ class qaoa_pulser(object):
         sim = self.create_quantum_circuit(param)
         if self.quantum_noise is not None:
             sim.add_config(self.noise_config)
+        
         results = sim.run()
         #np.random.seed(28)
 
