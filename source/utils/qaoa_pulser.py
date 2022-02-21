@@ -24,19 +24,15 @@ class qaoa_pulser(object):
         self.delta = Q_DEVICE_PARAMS['delta_over_2pi'] * 2 * np.pi #see notes/info.pdf for the calculation
         self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
         self.depth = depth
-        
-        if type_of_graph == 'chair':
-            a = 6
-            pos =[[0,0], [0,a], [a,0], [a,a], [2*a,a], [a,2*a]]
-            self.G = self.pos_to_graph(pos)
-        else:
-            print('type of graph not supported')
+        self.G, self.qubits_dict = self.generate_graph(type_of_graph)
+        print('graph is\n, ', self.G, self.G.nodes, self.G.edges)
+        nx.draw(self.G)
         self.solution = self.classical_solution()
         self.Nqubit = len(self.G)
         self.gs_state = None
         self.gs_en = None
         self.deg = None
-        self.qubits_dict = dict(enumerate(pos))
+
         self.reg = Register(self.qubits_dict)
         self.quantum_noise = quantum_noise
         if quantum_noise is not None:
@@ -49,23 +45,6 @@ class qaoa_pulser(object):
                                           )
             self.noise_info = self.noise_config.__str__()
         
-
-    def info(self, verbose):
-        '''
-        Returns a dictionary of infos on the qaoa to print 
-        '''
-        info  = {}
-        info['depth'] = self.depth
-        info['omega'] = self.omega
-        info['delta'] = self.delta
-        info['U'] = self.U
-        info['Nqubits'] = self.Nqubit
-        info['graph'] = self.G.edges
-        info['classical sol'] = self.solution
-        if self.quantum_noise is not None:
-            info['noise info'] = self.noise_info
-        
-        return info
         
     def print_info_problem(self,f):
         f.write('Problem: MIS\n')
@@ -86,16 +65,24 @@ class qaoa_pulser(object):
             f.write(f'Noise info: {self.noise_info}')
         f.write('\n')
         
-    def pos_to_graph(self, pos): 
+    def generate_graph(self, type_of_graph): 
         '''
         Creates a networkx graph from the relative positions between qubits
         Parameters: positions of qubits in micrometers
         Returns: networkx graph G
         '''
+        if type_of_graph == 'chair':
+            a = Q_DEVICE_PARAMS['lattice_spacing']
+            pos =[[0, 0], [a, 0], [3/2 * a, np.sqrt(3)/2 * a], [3/2 * a, -np.sqrt(3)/2 * a], [2 * a, 0], [3 * a, 0]]
+            print(pos)
+        else:
+            print('type of graph not supported')
+            
         d = Chadoq2.rydberg_blockade_radius(self.omega)
         G = nx.Graph()
         edges=[]
         distances = []
+        print(d)
         for n in range(len(pos)-1):
             for m in range(n+1, len(pos)):
                 pwd = ((pos[m][0]-pos[n][0])**2+(pos[m][1]-pos[n][1])**2)**0.5
@@ -105,7 +92,7 @@ class qaoa_pulser(object):
                     self.U.append(self.C_6_over_h/(pwd**6)) #And the interaction is given by C_6/(h*d^6)
         G.add_nodes_from(range(len(pos)))
         G.add_edges_from(edges)
-        return G
+        return G, dict(enumerate(pos))
         
     def classical_solution(self):
         '''
@@ -121,6 +108,7 @@ class qaoa_pulser(object):
             results[single_string] = self.get_cost_string(string_configuration)
         
         d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
+        print('classical solution: ', d)
         return d
         
         
@@ -212,8 +200,8 @@ class qaoa_pulser(object):
         print('Groundstate energy: ', gs_en)
         print('Degeneracy: ', deg)
         print('Groundstate: ', gs_state)
-        print('Largest amplitude: ', bin(np.argmax(gs_state)))
-        print('delta: ', self.delta, 'U: ', self.U[0])
+        #print('Largest amplitude: ', bin(np.argmax(gs_state)))
+        print('delta: ', self.delta, 'omega: ', self.omega, 'U: ', self.U[0])
         
         return gs_en, gs_state, deg
         
@@ -258,7 +246,6 @@ class qaoa_pulser(object):
         sampling_rate = 1
         while sampling_rate * sum(params) < 4:
             sampling_rate += 0.1
-        print(f'Sampling happens every: {sampling_rate *sum(params)} times')
         simul = Simulation(seq, sampling_rate=sampling_rate)
     
         return simul

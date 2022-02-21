@@ -24,7 +24,6 @@ class Bayesian_optimization():
         self.qaoa.calculate_physical_gs()
         self.qaoa.classical_solution()
         
-        
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, kernel_choice = kernel_choice)
 
@@ -34,7 +33,8 @@ class Bayesian_optimization():
         self.file_name = 'p={}_warmup={}_train={}'.format(self.depth, self.nwarmup, self.nbayes)
         gamma_names = ['GAMMA' + str(i) + ' ' for i in range(self.depth)]
         beta_names = ['BETA' + str(i) + ' ' for i in range(self.depth)]
-        data_names = ['iter'] + gamma_names + beta_names + ['energy', 
+        data_names = ['iter'] + gamma_names + beta_names + ['energy',
+                                                            'energy_ratio', 
                                                             'variance', 
                                                             'fidelity_exact', 
                                                             'fidelity_sampled', 
@@ -49,7 +49,7 @@ class Bayesian_optimization():
                                                             'time opt kernel', 
                                                             'time step']
                      
-        data_header = " ".join(["{:>7} ".format(i) for i in data_names]) + '\n'
+        self.data_header = " ".join(["{:>7} ".format(i) for i in data_names])
 
 
         info_file_name = self.file_name + '_info.txt'
@@ -71,20 +71,31 @@ class Bayesian_optimization():
             f.write(f'Ntraining points: {self.nbayes}\n')
             f.write('FILE.DAT PARAMETERS:\n')
             print(data_names, file = f)
+            
+    
         
     def init_training(self, Nwarmup):
         X_train, y_train, data_train = self.qaoa.generate_random_points(Nwarmup)
         self.gp.fit(X_train, y_train)
         
+        print('\nKernel after training fit')
+        print(self.gp.kernel_)
         
-        self.data_file_name = self.file_name + '.dat'
+        print(self.gp.plot_log_marginal_likelihood(show = True))
+        exit()
         kernel_params = np.exp(self.gp.kernel_.theta)
-        self.data = [[i] + x + [y_train[i]] + data_train[i] +
-                              [kernel_params[0],
-                               kernel_params[1], 0, 0, 0, 0, 0, 0, 0
-                              ] for i, x in enumerate(X_train)]
-        format = '%3d ' + 2*self.depth*'%6d ' + (len(self.data[0]) - 1 - 2*self.depth)*'%4.4f '
-        np.savetxt(self.data_file_name, self.data, fmt = format)
+
+        
+        self.data_ = []
+        for i, x in enumerate(X_train):
+            self.data_.append([i +1] + x + [y_train[i], self.qaoa.gs_en, y_train[i]/ self.qaoa.gs_en] + data_train[i] + [kernel_params[0], 
+                                                                      kernel_params[1], 
+                                                                      0, 0, 0, 0, 0, 0, 0])
+            
+        self.data_file_name = self.file_name + '.dat'
+        
+        print('\nWarmup Training data:')
+        print(self.data_)
         
     def run_optimization(self):
         print('Training ...')
@@ -99,24 +110,38 @@ class Bayesian_optimization():
             constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
             
             
-            print('iteration: {}/{}  {} en: {}, fid: {}'.format(i, self.nbayes, next_point, y_next_point, fid))
-            K = self.gp.covariance_matrix()
+            print(f'iteration: {i +1}/{self.nbayes}  {next_point} en/ratio: {y_next_point/self.qaoa.gs_en} en: {y_next_point}, fid: {fid}')
             
-            
-            L = np.linalg.cholesky(K)
             self.gp.fit(next_point, y_next_point)
-            #gp.plot_log_marginal_likelihood(show = False, save = True)
-
     
             kernel_time = time.time() - start_time - qaoa_time - bayes_time
             step_time = time.time() - start_time
     
-            new_data = [i+self.nwarmup] + next_point + [y_next_point, var, fid, fid_exact, sol_ratio, corr_length, constant_kernel, 
-                                            std_pop_energy, avg_sqr_distances, n_it, 
-                                            bayes_time, qaoa_time, kernel_time, step_time]     
+            new_data = ([i+self.nwarmup] 
+                           + next_point  
+                           + [y_next_point, 
+                             self.qaoa.gs_en, 
+                             y_next_point/self.qaoa.gs_en, 
+                             var, 
+                             fid, 
+                             fid_exact, 
+                             sol_ratio, 
+                             corr_length, 
+                             constant_kernel, 
+                             std_pop_energy, 
+                             avg_sqr_distances, 
+                             n_it, 
+                             bayes_time, 
+                             qaoa_time, 
+                             kernel_time, 
+                             step_time]  )  
+                                 
+            format_list = ['%+.6f '] * len(new_data)
+            format_list[0] = '% 4d '
+            fmt_string = "".join(format_list) 
 
-            self.data.append(new_data)
-            #np.savetxt(self.data_file_name, self.data, fmt = format)
+            self.data_.append(new_data)
+            np.savetxt(self.data_file_name, self.data_, fmt = fmt_string, header = self.data_header)
             
         best_x, best_y, where = self.gp.get_best_point()
         self.data.append(self.data[where])

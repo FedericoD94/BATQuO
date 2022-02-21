@@ -14,12 +14,11 @@ np.set_printoptions(threshold=sys.maxsize)
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
 
-### TRAIN PARAMETERS
+###### TRAIN PARAMETERS ##################
 
 args = parse_command_line()
 
 seed = args.seed
-
 fraction_warmup = args.fraction_warmup
 depth = args.p
 num_nodes = args.num_nodes
@@ -31,7 +30,7 @@ type_of_graph = args.type_of_graph
 verbose = args.verbose
 kernel_choice = args.kernel
 
-
+####### CREATE BAYES OPT INSTANCE ########
 bo = Bayesian_optimization(depth,
                            type_of_graph,
                            quantum_noise,

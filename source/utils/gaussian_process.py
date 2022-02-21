@@ -67,6 +67,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                          n_restarts_optimizer =DEFAULT_PARAMS['n_restart_kernel_optimizer'],
                          normalize_y=DEFAULT_PARAMS['n_restart_kernel_optimizer'],
                          *args, **kwargs)
+        print('created gaussian process with kernel')
+        print(self.kernel)
 
         
     def get_info(self):
@@ -246,11 +248,11 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         *args: the sign of the acquisition function (in case you have to minimize -acq fun)
         
         '''
-        self = args[0]
         try:
-            sign = args[1]
+            sign = args[0]
         except:
             sign = 1.0
+
         if isinstance(x[0], float):
             x = np.reshape(x, (1, -1))
         f_x, sigma_x = self.predict(x, return_std=True) 
@@ -264,51 +266,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         return sign*alpha_function
         
         
-    def pick_hyperparameters(self, N_points, bounds_elle, bounds_sigma):
-        ''' Generates array of (N_points,2) random hyperaparameters inside given bounds
-        '''
-        '''
-        elle = np.random.uniform(low = bounds_elle[0], high=bounds_elle[1], size=(N_points,))
-        sigma = np.random.uniform(low = bounds_sigma[0], high=bounds_sigma[1], size=(N_points,))
-        hyper_params = list(zip(elle,sigma))
-        
-        lml = np.array([self.log_marginal_likelihood(np.log(hyper_param)) for hyper_param in hyper_params])
-        idx_max_values = np.argpartition(lml, -50)[-50:] #takes the 50 indexes with largest value of lml
-        best_params = hyper_params[idx_max_values]
-        '''
 
-        nsteps, nwalkers, ndim = 100, 10, len(self.kernel_.theta)
-        start = np.random.uniform(0.1,1,(nwalkers,ndim)) 
-        tfp.mcmc.SliceSampler(
-            self.log_marginal_likelihood, step_size = 0.1, max_doublings = 10,
-            experimental_shard_axis_names=None, name=None
-            )
-        #sampler = zeus.EnsembleSampler(nwalkers, ndim, self.log_marginal_likelihood)
-        print("start sampli")
-        sampler.run_mcmc(start, nsteps)
-        print("end sampli")
-        hyper_params = sampler.get_chain(flat=True)[:N_points]
-        print("hhhh")
-        print(hyper_params)
-#         try:
-#             positive_hyper_params = hyper_params[hyper_params[:,0] > 0][:N_points]
-#         except:
-#              positive_hyper_params = hyper_params[hyper_params[:,0] > 0]
-#              print('Only {} hyper_params where selected'.format(len(positive_hyper_params)))
-        return hyper_params
-        
-    def mc_acq_func(self, x, *args):
-        ''' Averages the value of the acq_func for different sets of hyperparameters chosen
-        (for now) by uniform sampling '''
-        
-        hyper_params = args[-1]
-        acq_func_values = []
-        for params in hyper_params:
-            self.kernel.set_params(**{'k1__length_scale': params[0]})
-            self.kernel.set_params(**{'k2__constant_value': params[1]})
-            acq_func_values.append(self.acq_func(x, *args))
-            
-        return np.mean(acq_func_values)
         
     def bayesian_opt_step(self, method = 'DIFF-EVOL', init_pos = None):
         ''' Performs one step of bayesian optimization
@@ -346,7 +304,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
         if method == 'DIFF-EVOL':
             fun = self.acq_func
-            diff_evol_args = (self, -1)
+            diff_evol_args = [-1]
             with DifferentialEvolutionSolver(fun,
                                             bounds = [(0,1), (0,1)]*self.depth,
                                             callback = None,
@@ -399,7 +357,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         plt.colorbar(im)
         plt.colorbar(im2)
         plt.show()
-        
 
     def plot_acquisition_function(self, show = True, save = False):
         if len(self.X[0]) > 2:
