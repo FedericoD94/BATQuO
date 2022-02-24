@@ -27,7 +27,7 @@ class qaoa_pulser(object):
         self.G, self.qubits_dict = self.generate_graph(type_of_graph)
         print('graph is\n, ', self.G, self.G.nodes, self.G.edges)
         nx.draw(self.G)
-        self.solution = self.classical_solution()
+        self.solution, self.solution_energy = self.classical_solution()
         self.Nqubit = len(self.G)
         self.gs_state = None
         self.gs_en = None
@@ -97,7 +97,9 @@ class qaoa_pulser(object):
     def classical_solution(self):
         '''
         Runs through all 2^n possible configurations and estimates the solution
-        Returns: dictionary with {[bitstring solution] : energy}
+        Returns: 
+            d: dictionary with {[bitstring solution] : energy}
+            en: energy of the (possibly degenerate) solution
         '''
         results = {}
 
@@ -108,8 +110,10 @@ class qaoa_pulser(object):
             results[single_string] = self.get_cost_string(string_configuration)
         
         d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
+        en = list(d.values())[0]
         print('classical solution: ', d)
-        return d
+        
+        return d, en
         
         
     def get_cost_string(self, string):
