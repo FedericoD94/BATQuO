@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize
-from ._differentialevolution import DifferentialEvolutionSolver
 from  utils.default_params import *
 # SKLEARN
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -239,86 +238,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         where = np.argwhere(self.y_best == np.array(self.Y))
         return x_best, self.y_best, where[0,0]
 
-    def acq_func(self, x, *args):
-        '''Expected improvement at point x
-        
-        Arguments
-        ---------
-        x: point of the prediction
-        *args: the sign of the acquisition function (in case you have to minimize -acq fun)
-        
-        '''
-        try:
-            sign = args[0]
-        except:
-            sign = 1.0
-
-        if isinstance(x[0], float):
-            x = np.reshape(x, (1, -1))
-        f_x, sigma_x = self.predict(x, return_std=True) 
     
-        f_prime = self.y_best #current best value
-        
-        #Ndtr is a particular routing in scipy that computes the CDF in half the time
-        cdf = ndtr((f_prime - f_x)/sigma_x)
-        pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x**2))
-        alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
-        return sign*alpha_function
-        
-        
-
-        
-    def bayesian_opt_step(self, method = 'DIFF-EVOL', init_pos = None):
-        ''' Performs one step of bayesian optimization
-        
-        It uses the specified method to maximize the acquisition function
-        
-        Attributes
-        ----------
-        method: choice between grid search (not available for depth >1), hamiltonian monte 
-                carlo, finite differences gradient, scipy general optimization, diff evolution
-                
-        Returns (for diff evolution)
-        -------
-        next_point: where to sample next (rescaled to param range)
-        nit: number of iterations of the diff evolution algorithm
-        avg_norm_dist_vect: condition of convergence for the positions 
-        std_pop_energy: condition of convergence for the energies
-        '''
-        samples = []
-        acqfunvalues = []
-
-        def callbackF(Xi, convergence):
-            samples.append(Xi.tolist())
-            acqfunvalues.append(self.acq_func(Xi, self, 1)[0])
-
-        if method == 'SCIPY':
-            if init_pos is None:
-                print('You need to pass an initial point if using scipy')
-                raise Error
-            results = minimize(self.acq_func,
-                                bounds = [(0,1), (0,1)]*self.depth,
-                                x0 = init_pos,
-                                args = (self, -1))
-            next_point = results.x
-
-        if method == 'DIFF-EVOL':
-            fun = self.acq_func
-            diff_evol_args = [-1]
-            with DifferentialEvolutionSolver(fun,
-                                            bounds = [(0,1), (0,1)]*self.depth,
-                                            callback = None,
-                                            maxiter = 100*self.depth,
-                                            popsize = 15,
-                                            tol = .001,
-                                            dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
-                                            seed = self.seed,
-                                            args = diff_evol_args) as diff_evol:
-                results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
-            next_point = results.x
-        next_point = self.scale_up(next_point)
-        return next_point, results.nit, average_norm_distance_vectors, std_population_energy
-
     def covariance_matrix(self):
         K = self.kernel_(self.X)
         K[np.diag_indices_from(K)] += self.alpha

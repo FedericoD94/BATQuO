@@ -2,6 +2,8 @@ from .qaoa_pulser import *
 from .gaussian_process import *
 import numpy as np
 import time
+from ._differentialevolution import DifferentialEvolutionSolver
+
 
 class Bayesian_optimization():
 
@@ -73,7 +75,6 @@ class Bayesian_optimization():
             print(data_names, file = f)
             
     
-        
     def init_training(self, Nwarmup):
         X_train, y_train, data_train = self.qaoa.generate_random_points(Nwarmup)
         self.gp.fit(X_train, y_train)
@@ -81,8 +82,6 @@ class Bayesian_optimization():
         print('\nKernel after training fit')
         print(self.gp.kernel_)
         
-        print(self.gp.plot_log_marginal_likelihood(show = True))
-        exit()
         kernel_params = np.exp(self.gp.kernel_.theta)
 
         
@@ -97,11 +96,64 @@ class Bayesian_optimization():
         print('\nWarmup Training data:')
         print(self.data_)
         
+        
+    def acq_func(self, x, *args):
+        # unpack the sign 
+        try:
+            sign = args[0]
+        except:
+            sign = 1.0
+        
+        #check if acq_func is being evaluated on one point (needs reshaping) or many
+        if isinstance(x[0], float):
+            x = np.reshape(x, (1, -1))
+            
+        f_x, sigma_x = self.gp.predict(x, return_std=True) 
+    
+        f_prime = self.gp.y_best #current best value
+        
+        #Ndtr is a particular routing in scipy that computes the CDF in half the time
+        cdf = ndtr((f_prime - f_x)/sigma_x)
+        pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x**2))
+        alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
+        
+        return sign*alpha_function
+        
+        
+        
+    def bayesian_opt_step(self, init_pos = None):
+        
+        samples = []
+        acqfunvalues = []
+
+        #callback to save progress data
+        def callbackF(Xi, convergence):
+            samples.append(Xi.tolist())
+            acqfunvalues.append(self.acq_func(Xi, 1)[0])
+
+
+        fun = self.acq_func
+        diff_evol_args = [-1]
+        with DifferentialEvolutionSolver(fun,
+                                        bounds = [(0,1), (0,1)]*self.depth,
+                                        callback = None,
+                                        maxiter = 100*self.depth,
+                                        popsize = 15,
+                                        tol = .001,
+                                        dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
+                                        seed = DEFAULT_PARAMS['seed'],
+                                        args = diff_evol_args) as diff_evol:
+            results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
+            next_point = results.x
+        
+        next_point = self.gp.scale_up(next_point)
+        return next_point, results.nit, average_norm_distance_vectors, std_population_energy
+
     def run_optimization(self):
         print('Training ...')
         for i in range(self.nbayes):
             start_time = time.time()
-            next_point, n_it, avg_sqr_distances, std_pop_energy = self.gp.bayesian_opt_step()
+            next_point, n_it, avg_sqr_distances, std_pop_energy = self.bayesian_opt_step()
             next_point = [int(i) for i in next_point]
     
             bayes_time = time.time() - start_time
@@ -110,7 +162,7 @@ class Bayesian_optimization():
             constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
             
             
-            print(f'iteration: {i +1}/{self.nbayes}  {next_point} en/ratio: {y_next_point/self.qaoa.gs_en} en: {y_next_point}, fid: {fid}')
+            print(f'iteration: {i +1}/{self.nbayes}  {next_point} en/ratio: {y_next_point/4} en: {y_next_point}, fid: {fid}')
             
             self.gp.fit(next_point, y_next_point)
     
@@ -121,7 +173,7 @@ class Bayesian_optimization():
                            + next_point  
                            + [y_next_point, 
                              self.qaoa.gs_en, 
-                             y_next_point/self.qaoa.gs_en, 
+                             y_next_point/4, 
                              var, 
                              fid, 
                              fid_exact, 
@@ -144,6 +196,6 @@ class Bayesian_optimization():
             np.savetxt(self.data_file_name, self.data_, fmt = fmt_string, header = self.data_header)
             
         best_x, best_y, where = self.gp.get_best_point()
-        self.data.append(self.data[where])
+        self.data_.append(self.data_[where])
         #np.savetxt(self.data_file_name, self.data, fmt = format)
-        print('Best point: ' , self.data[where])
+        print('Best point: ' , self.data_[where])

@@ -119,9 +119,9 @@ class qaoa_pulser(object):
         
         cost = 0
         delta = np.max([self.delta, -self.delta]) # to ensure the constant is negative
-        cost = -sum(configuration)*delta
+        cost = -sum(configuration)
         for i,edge in enumerate(self.G.edges):
-            cost += self.U[i]*(configuration[edge[0]]*configuration[edge[1]])
+            cost += penalty*(configuration[edge[0]]*configuration[edge[1]])
         
         return cost
         

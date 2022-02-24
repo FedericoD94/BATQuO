@@ -1,14 +1,14 @@
 
 # Set global parameters
 s_eigenvalues = [0, 1]
-DEFAULT_PARAMS = {"penalty": 2,
+DEFAULT_PARAMS = {"penalty": 5,
                   "shots": 12800,
                   "num_grid": 4,
                   "seed" : 23, 
                   "initial_length_scale" : 1,
-                  "length_scale_bounds" : (0.1, 100),
+                  "length_scale_bounds" : (0.01, 100),
                   "initial_sigma":1,
-                  "constant_bounds":(0.1, 100),
+                  "constant_bounds":(0.01, 100),
                   "nu" : 2.5,
                   "max_iter_lfbgs": 50000,
                   "normalize_y": False,
@@ -17,7 +17,7 @@ DEFAULT_PARAMS = {"penalty": 2,
                   "diff_evol_func": None, # or 'mc',
                   "n_restart_kernel_optimizer":9,
                   "distance_conv_tol": 0.01,
-                  "angle_bounds": [[100, 2000], [100, 2000]]
+                  "angle_bounds": [[100, 800], [100, 800]]
                   }
                   
 Q_DEVICE_PARAMS = {'lattice_spacing': 5, #\mu m
