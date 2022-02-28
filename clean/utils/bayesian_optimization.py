@@ -27,7 +27,7 @@ class Bayesian_optimization():
         self.qaoa = qaoa_pulser(depth, type_of_graph, quantum_noise)
         self.qaoa.calculate_physical_gs()
         a = self.qaoa.apply_qaoa([100,100,116,1000,111,553], show = False)
-        print(a)
+        print(a['exact_energy'])
         exit()
 
         ### CREATE GP 

@@ -6,6 +6,7 @@ from pulser import Pulse, Sequence, Register, Simulation
 from pulser.devices import Chadoq2
 Chadoq2.change_rydberg_level(60)
 from pulser.simulation import SimConfig
+
 from itertools import product
 from utils.default_params import *
 import random
@@ -420,12 +421,18 @@ class qaoa_pulser(object):
         
         Returns
         -------
-            Sampled_energy: energy obtained by sampling the final state distribution
-            exact_energy: energy obtained with the exact groundstate returned 
-            sampled_variance: 
+            results_dict: Dictionary with all the info of the qaoa final state:
+                          sampled_state, sampled_energy, sampled_variance, exact_energy
+                          exact_variance, sampled_fidelity, exact_fidelity, solution_ratio
+                          states of the evolution
             
         '''
-        
+        #Checks the number of parameters
+        if len(params) != 2*self.depth:
+            print('\nWARNING:\n'
+                  f'Running qaoa with a number of params different from '
+                  f'2*depth = {2*self.depth}, number of passed parameters is '
+                  f'{len(params)}')
         #quantum loop returns a dictionary of N_shots measured states and the evolution
         #of qutip state
         results_dict = {}
