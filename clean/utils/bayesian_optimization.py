@@ -26,7 +26,9 @@ class Bayesian_optimization():
         ### CREATE QAOA
         self.qaoa = qaoa_pulser(depth, type_of_graph, quantum_noise)
         self.qaoa.calculate_physical_gs()
-        self.qaoa.classical_solution()
+        a = self.qaoa.apply_qaoa([100,100,116,1000,111,553], show = False)
+        print(a)
+        exit()
 
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, kernel_choice = kernel_choice)
@@ -76,36 +78,36 @@ class Bayesian_optimization():
             f.write(f'Ntraining points: {self.nbayes}\n')
             f.write('FILE.DAT PARAMETERS:\n')
             print(self.data_names, file = f)
-            
-    
+               
     def init_training(self, Nwarmup):
         X_train, y_train, data_train = self.qaoa.generate_random_points(Nwarmup)
         self.gp.fit(X_train, y_train)
         
+        df = pd.DataFrame(np.column_stack((X_train, y_train)))
+        print('### TRAIN DATA ###')
+        print(df)
         print('\nKernel after training fit')
         print(self.gp.kernel_)
+        print('\nStarting K')
+        print(self.gp.get_covariance_matrix())
         
         kernel_params = np.exp(self.gp.kernel_.theta)
-
-        
         self.data_ = []
         for i, x in enumerate(X_train):
-            self.data_.append([i +1] + x + [y_train[i], self.qaoa.gs_en, y_train[i]/ self.qaoa.gs_en] + data_train[i] + [kernel_params[0], 
-                                                                      kernel_params[1], 
-                                                                      0, 0, 0, 0, 0, 0, 0])
+            self.data_.append([i +1] + x  
+                                   +[y_train[i], 
+                                     self.qaoa.gs_en, 
+                                     y_train[i]/ self.qaoa.gs_en]
+                                   + data_train[i] 
+                                   +[kernel_params[0], 
+                                     kernel_params[1], 
+                                     0, 0, 0, 0, 0, 0, 0]
+                              )
             
         self.data_file_name = self.file_name + '.dat'
         
-        print('\nWarmup Training data:')
-        print(self.data_)
-        
-        
-    def acq_func(self, x, *args):
-        # unpack the sign 
-        try:
-            sign = args[0]
-        except:
-            sign = 1.0
+               
+    def acq_func(self, x):
         
         #check if acq_func is being evaluated on one point (needs reshaping) or many
         if isinstance(x[0], float):
@@ -120,9 +122,12 @@ class Bayesian_optimization():
         pdf = 1/(sigma_x*np.sqrt(2*np.pi)) * np.exp(-((f_prime -f_x)**2)/(2*sigma_x**2))
         alpha_function = (f_prime - f_x) * cdf + sigma_x * pdf
         
-        return sign*alpha_function
+        return alpha_function
         
         
+    def acq_func_maximize(self, x):
+    
+        return (-1)*self.acq_func(x)
         
     def bayesian_opt_step(self, init_pos = None):
         
@@ -134,40 +139,59 @@ class Bayesian_optimization():
             samples.append(Xi.tolist())
             acqfunvalues.append(self.acq_func(Xi, 1)[0])
 
-
-        fun = self.acq_func
-        diff_evol_args = [-1]
-        with DifferentialEvolutionSolver(fun,
-                                        bounds = [(0,1), (0,1)]*self.depth,
-                                        callback = None,
-                                        maxiter = 100*self.depth,
-                                        popsize = 15,
-                                        tol = .001,
-                                        dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
-                                        seed = DEFAULT_PARAMS['seed'],
-                                        args = diff_evol_args) as diff_evol:
+        repeat = True
+        with DifferentialEvolutionSolver(self.acq_func_maximize,
+                                         bounds = [(0,1), (0,1)]*self.depth,
+                                         callback = None,
+                                         maxiter = 100*self.depth,
+                                         popsize = 15,
+                                         tol = .001,
+                                         dist_tol = DEFAULT_PARAMS['distance_conv_tol'],
+                                         seed = DEFAULT_PARAMS['seed']
+                                         ) as diff_evol:
             results,average_norm_distance_vectors, std_population_energy, conv_flag = diff_evol.solve()
             next_point = results.x
         
-        next_point = self.gp.scale_up(next_point)
+            next_point = self.gp.scale_up(next_point)
+                
         return next_point, results.nit, average_norm_distance_vectors, std_population_energy
 
+    def check_proposed_point(self, point):
+        X_ = self.gp.get_X()
+        
+        if point in X_:
+            return False
+        else:
+            return True
+            
     def run_optimization(self):
         print('Training ...')
         for i in range(self.nbayes):
             start_time = time.time()
             next_point, n_it, avg_sqr_distances, std_pop_energy = self.bayesian_opt_step()
             next_point = [int(i) for i in next_point]
-    
+            check_ = self.check_proposed_point(next_point)
+            if not check_:
+                print('Found the same point twice {next_point} by the optimization')
+                print('ending optimization')
+                break
+            
             bayes_time = time.time() - start_time
-            y_next_point, var, fid, fid_exact, sol_ratio, _, _ = self.qaoa.apply_qaoa(next_point)
+            
+            qaoa_results = self.qaoa.apply_qaoa(next_point)
+            y_next_point = qaoa_results['sampled_energy']
+            
             qaoa_time = time.time() - start_time - bayes_time
+            
             constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
             
-            
-            print(f'iteration: {i +1}/{self.nbayes}  {next_point} en/ratio: {y_next_point/self.qaoa.solution_energy} en: {y_next_point}, fid: {fid}')
+            print(f'iteration: {i +1}/{self.nbayes}  {next_point}'
+                    'en/ratio: {y_next_point/self.qaoa.solution_energy}'
+                    'en: {y_next_point}, fid: {qaoa_results}'
+                    )
             
             self.gp.fit(next_point, y_next_point)
+            self.gp.get_log_marginal_likelihood(show = True, save = False)
     
             kernel_time = time.time() - start_time - qaoa_time - bayes_time
             step_time = time.time() - start_time
@@ -177,10 +201,11 @@ class Bayesian_optimization():
                            + [y_next_point, 
                              self.qaoa.solution_energy, 
                              y_next_point/self.qaoa.solution_energy, 
-                             var, 
-                             fid, 
-                             fid_exact, 
-                             sol_ratio, 
+                             qaoa_results['sampled_variance'], 
+                             qaoa_results['exact_variance'],
+                             qaoa_results['sampled_fidelity'],
+                             qaoa_results['exact_fidelity'], 
+                             qaoa_results['solution_ratio'], 
                              corr_length, 
                              constant_kernel, 
                              std_pop_energy, 
@@ -189,10 +214,12 @@ class Bayesian_optimization():
                              bayes_time, 
                              qaoa_time, 
                              kernel_time, 
-                             step_time]  )  
-            format_list = ['%+.6f '] * len(new_data)
-            format_list[0] = '% 4d '
-            self.fmt_string = "".join(format_list) 
+                             step_time]  )
+            exit()
+
+            # format_list = ['%+.6f '] * len(new_data)
+#             format_list[0] = '% 4d '
+#             self.fmt_string = "".join(format_list) 
 
             self.data_.append(new_data)
             df = pd.DataFrame(data = self.data_, columns = self.data_names)

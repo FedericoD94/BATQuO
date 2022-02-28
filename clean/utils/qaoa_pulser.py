@@ -11,6 +11,7 @@ from utils.default_params import *
 import random
 from qutip import *
 from scipy.stats import qmc
+import pandas as pd
 
 np.random.seed(DEFAULT_PARAMS['seed'])
 random.seed(DEFAULT_PARAMS['seed'])
@@ -25,8 +26,6 @@ class qaoa_pulser(object):
         self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
         self.depth = depth
         self.G, self.qubits_dict = self.generate_graph(type_of_graph)
-        print('graph is\n, ', self.G, self.G.nodes, self.G.edges)
-        nx.draw(self.G)
         self.solution, self.solution_energy = self.classical_solution()
         self.Nqubit = len(self.G)
         self.gs_state = None
@@ -73,25 +72,34 @@ class qaoa_pulser(object):
         '''
         if type_of_graph == 'chair':
             a = Q_DEVICE_PARAMS['lattice_spacing']
-            pos =[[0, 0], [a, 0], [3/2 * a, np.sqrt(3)/2 * a], [3/2 * a, -np.sqrt(3)/2 * a], [2 * a, 0], [3 * a, 0]]
-            print(pos)
+            pos =[[0, 0], 
+                  [a, 0], 
+                  [3/2 * a, np.sqrt(3)/2 * a], 
+                  [3/2 * a, -np.sqrt(3)/2 * a], 
+                  [2 * a, 0], 
+                  [3 * a, 0]
+                  ]
         else:
             print('type of graph not supported')
             
-        d = Chadoq2.rydberg_blockade_radius(self.omega)
+        rydberg_radius = Chadoq2.rydberg_blockade_radius(self.omega)
         G = nx.Graph()
         edges=[]
         distances = []
-        print(d)
         for n in range(len(pos)-1):
             for m in range(n+1, len(pos)):
                 pwd = ((pos[m][0]-pos[n][0])**2+(pos[m][1]-pos[n][1])**2)**0.5
                 distances.append(pwd)
-                if pwd < d:
+                if pwd < rydberg_radius:
                     edges.append([n,m]) # Below rbr, vertices are connected
                     self.U.append(self.C_6_over_h/(pwd**6)) #And the interaction is given by C_6/(h*d^6)
         G.add_nodes_from(range(len(pos)))
         G.add_edges_from(edges)
+        print('\n###### CREATED GRAPH ######\n')
+        print(G.nodes, G.edges)
+        print('Rydberg Radius: ', rydberg_radius)
+        print('Lattice spacing: ', a)
+        
         return G, dict(enumerate(pos))
         
     def classical_solution(self):
@@ -111,7 +119,19 @@ class qaoa_pulser(object):
         
         d = dict((k, v) for k, v in results.items() if v == np.min(list(results.values())))
         en = list(d.values())[0]
-        print('classical solution: ', d)
+        
+        #sort the dictionary
+        results = dict(sorted(results.items(), key=lambda item: item[1]))
+        
+        #counts the distribution of energies
+        energies, counts = np.unique(list(results.values()), return_counts = True)
+        df = pd.DataFrame(np.column_stack((energies, counts)), columns = ['energy', 'counts'])
+        print('\n####CLASSICAL SOLUTION######\n')
+        print('Lowest energy:', d)
+        print('First excited states:', {k: results[k] for k in list(results)[1:5]})
+        print('Energy distribution')
+        print(df)
+        
         
         return d, en
         
@@ -189,25 +209,26 @@ class qaoa_pulser(object):
         degeneracy = degeneracies[0]
         
         gs_en = energies[0]
+        
         if degeneracy > 1:
             deg = degeneracy
             gs_state = eigenstates[:degeneracy]
         else:
             deg = degeneracy - 1
             gs_state = eigenstates[0]
-            gs_state = np.squeeze(gs_state.full())
 
         self.gs_state = gs_state
         self.gs_en = gs_en
         self.deg = deg
         
+        print('\n##### QAOA HAMILTONIAN #######')
+        print('H = - \u03b4 \u03A3 Z_i + U \u03A3 Z_i Z_j\n')
+        print('Mixing: \u03A9 \u03A3 X_i\n')
+        print('\u03b4: ', self.delta, '\n\u03A9: ', self.omega, '\nU: ', self.U[0])
         print('Groundstate energy: ', gs_en)
         print('Degeneracy: ', deg)
-        print('Groundstate: ', gs_state)
-        #print('Largest amplitude: ', bin(np.argmax(gs_state)))
-        print('delta: ', self.delta, 'omega: ', self.omega, 'U: ', self.U[0])
         
-        return gs_en, gs_state, deg
+        return gs_en, gs_state, deg, H
         
     def generate_random_points(self, N_points):
         ''' Generates N_points random points with the latin hypercube method
@@ -234,16 +255,20 @@ class qaoa_pulser(object):
     def create_quantum_circuit(self, params):
         seq = Sequence(self.reg, Chadoq2)
         seq.declare_channel('ch0','rydberg_global')
-        p = int(len(params)/2)
         gammas = params[::2]
         betas = params[1::2]
-        for i in range(p):
+        
+        for i in range(self.depth):
+            #Ensures params are multiples of 4 ns
             beta_i = int(betas[i]) - int(betas[i]) % 4
             gamma_i = int(gammas[i]) - int(gammas[i]) % 4
-            pulse_1 = Pulse.ConstantPulse(beta_i, self.omega, 0, 0) # H_M
-            pulse_2 = Pulse.ConstantPulse(gamma_i, 0, self.delta, 0) # H_M + H_c
-            seq.add(pulse_1, 'ch0')
-            seq.add(pulse_2, 'ch0')
+            
+            mixing_pulse = Pulse.ConstantPulse(beta_i, self.omega, 0, 0) # H_M
+            hamiltonian_pulse = Pulse.ConstantPulse(gamma_i, 0, self.delta, 0) # H_c
+            
+            seq.add(mixing_pulse, 'ch0')
+            seq.add(hamiltonian_pulse, 'ch0')
+            
         seq.measure('ground-rydberg')
         
         #check if sampling_rate is too small by doing rate*total_duration:
@@ -260,9 +285,9 @@ class qaoa_pulser(object):
             sim.add_config(self.noise_config)
         
         results = sim.run()
-        #np.random.seed(28)
 
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
+        
         return count_dict, results.states
 
     def plot_final_state_distribution(self, C):
@@ -273,10 +298,11 @@ class qaoa_pulser(object):
             color_dict[val] = 'r'
         plt.figure(figsize=(10,6))
         plt.xlabel("bitstrings")
-        #plt.xticks(size = 15)
         plt.ylabel("counts")
         plt.bar(C.keys(), C.values(), width=0.5, color = color_dict.values())
         plt.xticks(rotation='vertical')
+        plt.title('Final sampled state | p = {} | N shots = {}'.format(self.depth, 
+                                                                DEFAULT_PARAMS['shots']))
         plt.show()
     
     def plot_landscape(self,
@@ -317,18 +343,6 @@ class qaoa_pulser(object):
         if save:
             np.savetxt('../data/raw/graph_Grid_search_{}x{}.dat'.format(num_grid, num_grid), Q)
             np.savetxt('../data/raw/graph_Grid_search_{}x{}_params.dat'.format(num_grid, num_grid), Q)
-
-    def fidelity_gs_sampled(self, C):
-        '''
-        Fidelity sampled means how many times the solution(s) is measured
-        '''
-        fid = 0
-        for sol_key in self.solution.keys():
-            fid += C[sol_key]
-        
-        fid = fid/DEFAULT_PARAMS['shots']
-        
-        return fid
             
     def solution_ratio(self, C):
         sol_ratio = 0
@@ -349,43 +363,95 @@ class qaoa_pulser(object):
         Return the fidelity of the exact qaoa state (obtained with qutip) and the 
         exact groundstate calculated with the physical hamiltonian of pulser
         '''
-        final_state = np.squeeze(final_state)
-        if self.gs_state is None:
-            self.calculate_physical_gs()
-        if self.deg:
-            fidelities = [np.abs(np.dot(final_state, self.gs_state[i]))**2 for i in range(len(self.gs_state))]
-            fidelity = np.sum(fidelities)
-        else:
-            fidelity = np.squeeze(np.abs(np.dot(final_state, self.gs_state))**2)
+        flipped = np.flip(final_state.full())
+        flipped = Qobj(flipped, dims = [[2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]])
+        overlap = self.gs_state.overlap(flipped)
+        fidelity =  np.abs(overlap)**2
+
         return fidelity
-    
-    def expected_variance(self,counts, sample_mean):
+        
+    def calculate_sampled_energy_and_variance(self, sampled_state):
+        sampled_energy = self.get_cost_dict(sampled_state)
+        
         shots=DEFAULT_PARAMS["shots"]
         estimated_variance = 0
-        for configuration in counts:
-            hamiltonian_i = self.get_cost_string(configuration) # energy of i-th configuration
-            estimated_variance += counts[configuration] * (sample_mean - hamiltonian_i)**2
-        
-        estimated_variance /= shots - 1 # use unbiased variance estimator
+        for configuration in list(sampled_state.keys()):
+            hamiltonian_i = self.get_cost_string(configuration) # energy of i-th 
+                                                                # configuration
 
-        return estimated_variance
+            estimated_variance += sampled_state[configuration] * (sampled_energy - hamiltonian_i)**2
         
-    def expected_energy(self, C):
-        cost = self.get_cost_dict(C)
+        estimated_variance = estimated_variance / (shots - 1) # use unbiased variance estimator
         
-        return cost
+        return sampled_energy, estimated_variance
 
+    def calculate_fidelity_sampled(self, C):
+        '''
+        Fidelity sampled means how many times the solution(s) is measured
+        '''
+        fid = 0
+        for sol_key in self.solution.keys():
+            fid += C[sol_key]
+        
+        fid = fid/DEFAULT_PARAMS['shots']
+        
+        return fid
+        
+    def calculate_exact_energy_and_variance(self, final_state):
+         _, _, _, H = self.calculate_physical_gs()
+         
+         #Qutip and the results from pulser have opposite endians so we need to flip
+         #the array
+         flipped = np.flip(final_state.full())
+         flipped = Qobj(flipped, dims = [[2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]])
+         
+         expected_energy = expect(H, flipped)
+         expected_variance = variance(H, flipped)
+         
+         return expected_energy, expected_variance
+        
     def apply_qaoa(self, params, show = False):
-        C, evol= self.quantum_loop(params)
-        energy = self.expected_energy(C)
-        expected_variance = self.expected_variance(C, energy)
-        fidelity_sampled = self.fidelity_gs_sampled(C)
+        '''
+        Runs qaoa with the specified parameters
+        
+        Parameters
+        ----------
+            params: set of angles, needs to be of len 2*depth, can be either int or float
+        
+        Returns
+        -------
+            Sampled_energy: energy obtained by sampling the final state distribution
+            exact_energy: energy obtained with the exact groundstate returned 
+            sampled_variance: 
+            
+        '''
+        
+        #quantum loop returns a dictionary of N_shots measured states and the evolution
+        #of qutip state
+        results_dict = {}
+        sampled_state, evolution_states= self.quantum_loop(params)
+        results_dict['sampled_state'] = sampled_state
+        results_dict['evolution_states'] = evolution_states
+        
+        sampled_energy, sampled_variance = self.calculate_sampled_energy_and_variance(sampled_state)
+        results_dict['sampled_energy'] = sampled_energy
+        results_dict['sampled_variance'] = sampled_variance
+        results_dict['sampled_fidelity'] = self.calculate_fidelity_sampled(sampled_state)
+        
+        exact_energy, exact_variance = self.calculate_exact_energy_and_variance(evolution_states[-1])
+        results_dict['exact_energy'] = exact_energy
+        results_dict['exact_variance'] = exact_variance 
+        results_dict['solution_ratio'] = self.solution_ratio(sampled_state)
+
         if self.quantum_noise is None:
-            fidelity_exact = self.fidelity_gs_exact(np.flip(evol[-1]))
+            results_dict['exact_fidelity'] = self.fidelity_gs_exact(evolution_states[-1])
+
         else:
-            fidelity_exact = 0
-        solution_ratio = self.solution_ratio(C)
+            results_dict['exact_fidelity'] = 0
         
         if show:
-            self.plot_final_state_distribution(C)
-        return energy, expected_variance, fidelity_sampled, fidelity_exact, solution_ratio, C, evol
+            self.plot_final_state_distribution(sampled_state)
+            
+        return results_dict
+                
+        

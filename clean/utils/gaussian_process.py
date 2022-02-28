@@ -48,7 +48,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         self.x_best = 0
         self.y_best = np.inf
         self.seed = DEFAULT_PARAMS["seed"]
-        self.samples = []
+        self.kernel_opt_samples = []
         self.depth = depth
         
         kernel = ConstantKernel(constant_value = DEFAULT_PARAMS['initial_length_scale'],
@@ -66,8 +66,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                          n_restarts_optimizer =DEFAULT_PARAMS['n_restart_kernel_optimizer'],
                          normalize_y=DEFAULT_PARAMS['n_restart_kernel_optimizer'],
                          *args, **kwargs)
-        print('created gaussian process with kernel')
-        print(self.kernel)
+        print('\n### GAUSSIAN PROCESS ###')
+        print('Initialized kernel: ', self.kernel)
 
         
     def get_info(self):
@@ -117,23 +117,25 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         def obj_func_no_grad(x):
                 return  obj_func(x)[0]
         
-        samples = []
-        def callbackF(Xi):
-            samples.append(np.exp(Xi).tolist())
                 
         if self.optimizer == "fmin_l_bfgs_b":
-#            try:
-            opt_res = minimize(obj_func,
-                                           initial_theta,
-                                           method="L-BFGS-B",
-                                           jac=True,
-                                           callback = callbackF,
-                                           bounds=bounds,
-                                           options={'maxiter': self.max_iter,
-                                                    'gtol': self.gtol}
-                                           )
+            samples = []
+            samples.append(initial_theta.tolist())
+            def callbackF(Xi):
+                samples.append(Xi.tolist())
+            
+            opt_res = minimize(fun=obj_func,
+                               x0=initial_theta,
+                               method="L-BFGS-B",
+                               jac=True,
+                               callback = callbackF,
+                               bounds=bounds,
+                               options={'maxiter': self.max_iter,
+                                        'gtol': self.gtol}
+                               )
             _check_optimize_result("lbfgs", opt_res)
             theta_opt, func_min = opt_res.x, opt_res.fun
+            print(samples)
 
         elif callable(self.optimizer):
             theta_opt, func_min = self.optimizer(obj_func,
@@ -145,7 +147,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         else:
             raise ValueError("Unknown optimizer %s." % self.optimizer)
         
-        self.samples.append(samples)
+        self.kernel_opt_samples.append(samples)
         
         return theta_opt, func_min
 
@@ -238,8 +240,10 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         where = np.argwhere(self.y_best == np.array(self.Y))
         return x_best, self.y_best, where[0,0]
 
-    
-    def covariance_matrix(self):
+    def get_X(self):
+        return self.scale_up(self.X)
+          
+    def get_covariance_matrix(self):
         K = self.kernel_(self.X)
         K[np.diag_indices_from(K)] += self.alpha
         
@@ -302,32 +306,42 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         if show:
             plt.show()
             
-    def plot_log_marginal_likelihood(self, show = True, save = False):
+    def get_log_marginal_likelihood(self, show = False, save = True):
         fig = plt.figure()
         num = 50
-        x = np.zeros((num, num))
         
-        for i in range(num):
-            for j in range(num):
-                x[j, i] = self.log_marginal_likelihood([np.log((i+0.001)*2/num),np.log((j+0.001)*10/num)])
-        min_x = DEFAULT_PARAMS['length_scale_bounds'][0]
-        max_x = DEFAULT_PARAMS['length_scale_bounds'][1]
-        min_y = DEFAULT_PARAMS['constant_bounds'][0]
-        max_y = DEFAULT_PARAMS['constant_bounds'][1]
-        im = plt.imshow(x, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
-        for path in self.samples:
-            path = np.array(path)
-            print(path)
-            plt.plot(path[:,0],  path[:,1], 'o-', c = 'r')
-            plt.scatter(path[-1, 0], path[-1,1],  c = 'purple')
+        min_x = np.log(DEFAULT_PARAMS['length_scale_bounds'][0])
+        max_x = np.log(DEFAULT_PARAMS['length_scale_bounds'][1])
+        min_y = np.log(DEFAULT_PARAMS['constant_bounds'][0])
+        max_y = np.log(DEFAULT_PARAMS['constant_bounds'][1])
+                
+        
+        ascisse = np.linspace(min_x, max_x, num = num)
+        ordinate = np.linspace(min_y, max_y, num = num)
+        likelihood = np.zeros((num, num))
+        for i, ascissa in enumerate(ascisse):
+            for j, ordinata in enumerate(ordinate):
+                likelihood[j, i] = self.log_marginal_likelihood([ascissa, ordinata])
+                        
+        im = plt.imshow(likelihood, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
+        
+        print(len(self.kernel_opt_samples))
+        exit()
+        for path_ in self.kernel_opt_samples:
+            path_ = np.array(path_)
+            print(path_)
+            plt.plot(path_[:,0],  path_[:,1], 'o-', c = 'r')
+            plt.scatter(path_[-1, 0], path_[-1,1],  c = 'purple')
         plt.xlabel('Corr length')
         plt.ylabel('Constant')
         plt.colorbar(im)
-        max = np.max(x)
+        max = np.max(likelihood)
         plt.clim(max-5, max*1.1)
         plt.title('log_marg_likelihood iter:{} kernel_{}'.format(len(self.X), self.kernel_))
         if save:
             plt.savefig('data/marg_likelihood_iter={}_kernel={}.png'.format(len(self.X), self.kernel_))
         if show:
             plt.show()
+            
+        return likelihood
 

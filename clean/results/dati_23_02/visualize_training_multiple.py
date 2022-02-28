@@ -22,8 +22,6 @@ variances = np.zeros((len(depths), Ntot))
 energies_best[0] = 0
 fidelities_best[0] = 0
 
-
-
 for i, depth in enumerate(depths):
     energy_pos = 1 + 2*depth
     fidelity_pos = energy_pos + 4
@@ -37,10 +35,6 @@ for i, depth in enumerate(depths):
         divide = -77.8
     else:
         divide = -4
-    
-    a = pd.read_csv('cici.dat')
-    print(a['energy'])
-    exit()
     A = np.loadtxt(f'p={depth}_warmup={Nwarmup}_train={Nbayes}.dat')
     energies_best[i, 0] = A[0, energy_pos]/(divide)
     fidelities_best[i, 0] = A[0, fidelity_pos]
