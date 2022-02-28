@@ -12,7 +12,6 @@ from scipy.stats import norm
 from scipy.special import ndtr
 from sklearn.preprocessing import StandardScaler
 import random
-import dill
 import warnings
 from sklearn.exceptions import ConvergenceWarning
 

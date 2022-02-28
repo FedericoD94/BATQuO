@@ -27,6 +27,7 @@ class Bayesian_optimization():
         ### CREATE QAOA
         self.qaoa = qaoa_pulser(depth, type_of_graph, lattice_spacing, quantum_noise)
         self.qaoa.calculate_physical_gs()
+        self.lattice_spacing = lattice_spacing
 
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, kernel_choice = kernel_choice)
@@ -34,7 +35,7 @@ class Bayesian_optimization():
         
     def print_info(self):
         self.folder_name = 'results/'
-        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_{datetime.datetime.now().time()}'
+        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_spacing_{self.lattice_spacing}'
         gamma_names = ['GAMMA_' + str(i)  for i in range(self.depth)]
         beta_names = ['BETA_' + str(i) for i in range(self.depth)]
         self.data_names = ['iter'] + gamma_names \

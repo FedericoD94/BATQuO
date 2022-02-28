@@ -17,7 +17,7 @@ DEFAULT_PARAMS = {"penalty": 5,
                   "diff_evol_func": None, # or 'mc',
                   "n_restart_kernel_optimizer":9,
                   "distance_conv_tol": 0.01,
-                  "angle_bounds": [[100, 800], [100, 800]]
+                  "angle_bounds": [[100, 1000], [100, 1000]]
                   }
                   
 Q_DEVICE_PARAMS = {'type_of_lattice': 'triangular',
