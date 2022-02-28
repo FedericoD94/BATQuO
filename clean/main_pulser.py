@@ -27,12 +27,14 @@ nbayes = args.nbayes
 average_connectivity = args.average_connectivity
 quantum_noise =  args.quantum_noise
 type_of_graph = args.type_of_graph
+lattice_spacing = args.lattice_spacing
 verbose = args.verbose
 kernel_choice = args.kernel
 
 ####### CREATE BAYES OPT INSTANCE ########
 bo = Bayesian_optimization(depth,
                            type_of_graph,
+                           lattice_spacing,
                            quantum_noise,
                            nwarmup,
                            nbayes,

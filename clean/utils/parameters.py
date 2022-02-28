@@ -87,5 +87,11 @@ def parse_command_line():
                         default='matern',
                         help="kernel type: matern or RBF"
                         )
+    
+    parser.add_argument('--lattice_spacing',
+                        type=float,
+                        default=5,
+                        help="spacing between qubits on the lattice (min 4)"
+                        )
                         
     return parser.parse_args()

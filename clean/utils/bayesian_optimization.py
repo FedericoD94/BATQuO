@@ -12,6 +12,7 @@ class Bayesian_optimization():
     def __init__(self,
                  depth,
                  type_of_graph,
+                 lattice_spacing,
                  quantum_noise,
                  nwarmup,
                  nbayes,
@@ -24,11 +25,8 @@ class Bayesian_optimization():
         self.nbayes = nbayes
         
         ### CREATE QAOA
-        self.qaoa = qaoa_pulser(depth, type_of_graph, quantum_noise)
+        self.qaoa = qaoa_pulser(depth, type_of_graph, lattice_spacing, quantum_noise)
         self.qaoa.calculate_physical_gs()
-        a = self.qaoa.apply_qaoa([100,100,116,1000,111,553], show = False)
-        print(a['exact_energy'])
-        exit()
 
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, kernel_choice = kernel_choice)
@@ -36,26 +34,29 @@ class Bayesian_optimization():
         
     def print_info(self):
         self.folder_name = 'results/'
-        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_{datetime.datetime.now()}'
+        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_{datetime.datetime.now().time()}'
         gamma_names = ['GAMMA_' + str(i)  for i in range(self.depth)]
         beta_names = ['BETA_' + str(i) for i in range(self.depth)]
-        self.data_names = ['iter'] + gamma_names + beta_names + ['energy',
-                                                            'energy_ratio', 
-                                                            'energy_solution',
-                                                            'variance', 
-                                                            'fidelity_exact', 
-                                                            'fidelity_sampled', 
-                                                            'ratio_solution', 
-                                                            'corr_length', 
-                                                            'const_kernel',
-                                                            'std_energies', 
-                                                            'average_distances', 
-                                                            'nit', 
-                                                            'time_opt_bayes', 
-                                                            'time_qaoa', 
-                                                            'time_opt_kernel', 
-                                                            'time_step']
-                     
+        self.data_names = ['iter'] + gamma_names \
+                                   + beta_names \
+                                   + ['energy',
+                                      'energy_solution',
+                                      'energy_ratio', 
+                                      'exact_energy',
+                                      'sampled_variance', 
+                                      'exact_variance',
+                                      'fidelity_exact', 
+                                      'fidelity_sampled', 
+                                      'ratio_solution', 
+                                      'corr_length', 
+                                      'const_kernel',
+                                      'std_energies', 
+                                      'average_distances', 
+                                      'nit', 
+                                      'time_opt_bayes', 
+                                      'time_qaoa', 
+                                      'time_opt_kernel', 
+                                      'time_step']
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
 
 
@@ -94,15 +95,20 @@ class Bayesian_optimization():
         kernel_params = np.exp(self.gp.kernel_.theta)
         self.data_ = []
         for i, x in enumerate(X_train):
-            self.data_.append([i +1] + x  
-                                   +[y_train[i], 
-                                     self.qaoa.gs_en, 
-                                     y_train[i]/ self.qaoa.gs_en]
-                                   + data_train[i] 
-                                   +[kernel_params[0], 
-                                     kernel_params[1], 
-                                     0, 0, 0, 0, 0, 0, 0]
-                              )
+            self.data_.append([i +1] 
+                               + x  
+                               +[y_train[i], 
+                                self.qaoa.solution_energy, 
+                                y_train[i]/ self.qaoa.solution_energy,
+                                data_train[i]['exact_energy'],
+                                data_train[i]['sampled_variance'], 
+                                data_train[i]['exact_variance'],
+                                data_train[i]['sampled_fidelity'],
+                                data_train[i]['exact_fidelity'], 
+                                data_train[i]['solution_ratio']] 
+                               +[kernel_params[0], 
+                                 kernel_params[1], 
+                                 0, 0, 0, 0, 0, 0, 0])
             
         self.data_file_name = self.file_name + '.dat'
         
@@ -186,13 +192,12 @@ class Bayesian_optimization():
             constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
             
             print(f'iteration: {i +1}/{self.nbayes}  {next_point}'
-                    'en/ratio: {y_next_point/self.qaoa.solution_energy}'
-                    'en: {y_next_point}, fid: {qaoa_results}'
+                    f' en/ratio: {y_next_point/self.qaoa.solution_energy}'
+                    ' en: {}, fid: {}'.format(y_next_point, qaoa_results['sampled_fidelity'])
                     )
             
             self.gp.fit(next_point, y_next_point)
-            self.gp.get_log_marginal_likelihood(show = True, save = False)
-    
+            self.gp.get_log_marginal_likelihood(show = False, save = False)
             kernel_time = time.time() - start_time - qaoa_time - bayes_time
             step_time = time.time() - start_time
 
@@ -201,6 +206,7 @@ class Bayesian_optimization():
                            + [y_next_point, 
                              self.qaoa.solution_energy, 
                              y_next_point/self.qaoa.solution_energy, 
+                             qaoa_results['exact_energy'],
                              qaoa_results['sampled_variance'], 
                              qaoa_results['exact_variance'],
                              qaoa_results['sampled_fidelity'],
@@ -215,7 +221,6 @@ class Bayesian_optimization():
                              qaoa_time, 
                              kernel_time, 
                              step_time]  )
-            exit()
 
             # format_list = ['%+.6f '] * len(new_data)
 #             format_list[0] = '% 4d '

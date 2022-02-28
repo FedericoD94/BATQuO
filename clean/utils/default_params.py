@@ -20,8 +20,7 @@ DEFAULT_PARAMS = {"penalty": 5,
                   "angle_bounds": [[100, 800], [100, 800]]
                   }
                   
-Q_DEVICE_PARAMS = {'lattice_spacing': 5, #\mu m
-                   'type_of_lattice': 'triangular',
+Q_DEVICE_PARAMS = {'type_of_lattice': 'triangular',
                    'eta': 0.005,
                    'thermal_motion': 85, #nm
                    'doppler_shift': 0.47, #MHz

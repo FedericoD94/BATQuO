@@ -19,11 +19,12 @@ random.seed(DEFAULT_PARAMS['seed'])
 
 class qaoa_pulser(object):
 
-    def __init__(self, depth, type_of_graph, quantum_noise = None):
+    def __init__(self, depth, type_of_graph, lattice_spacing, quantum_noise = None):
         self.C_6_over_h = Chadoq2.interaction_coeff
         self.angles_bounds = np.array(DEFAULT_PARAMS['angle_bounds'])
         self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi #see notes/info.pdf for this value
         self.delta = Q_DEVICE_PARAMS['delta_over_2pi'] * 2 * np.pi #see notes/info.pdf for the calculation
+        self.lattice_spacing = lattice_spacing
         self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
         self.depth = depth
         self.G, self.qubits_dict = self.generate_graph(type_of_graph)
@@ -72,7 +73,7 @@ class qaoa_pulser(object):
         Returns: networkx graph G
         '''
         if type_of_graph == 'chair':
-            a = Q_DEVICE_PARAMS['lattice_spacing']
+            a = self.lattice_spacing
             pos =[[0, 0], 
                   [a, 0], 
                   [3/2 * a, np.sqrt(3)/2 * a], 
@@ -221,11 +222,13 @@ class qaoa_pulser(object):
         self.gs_state = gs_state
         self.gs_en = gs_en
         self.deg = deg
+        self.H = H
         
         print('\n##### QAOA HAMILTONIAN #######')
         print('H = - \u03b4 \u03A3 Z_i + U \u03A3 Z_i Z_j\n')
         print('Mixing: \u03A9 \u03A3 X_i\n')
         print('\u03b4: ', self.delta, '\n\u03A9: ', self.omega, '\nU: ', self.U[0])
+        print('Rydberg condition U/\u03A9: ', self.U[0]/self.omega)
         print('Groundstate energy: ', gs_en)
         print('Degeneracy: ', deg)
         
@@ -247,9 +250,9 @@ class qaoa_pulser(object):
         X = qmc.scale(X, l_bounds, u_bounds).astype(int)
         X = X.tolist()
         for x in X:
-            y, var_y, fid_sampled, fid_exact, sol_ratio, _ , _ = self.apply_qaoa(x)
-            Y.append(y)
-            data_train.append([var_y, fid_sampled, fid_exact, sol_ratio])
+            qaoa_results = self.apply_qaoa(x)
+            Y.append(qaoa_results['sampled_energy'])
+            data_train.append(qaoa_results)
         
         return X, Y, data_train
 
@@ -399,15 +402,14 @@ class qaoa_pulser(object):
         return fid
         
     def calculate_exact_energy_and_variance(self, final_state):
-         _, _, _, H = self.calculate_physical_gs()
          
          #Qutip and the results from pulser have opposite endians so we need to flip
          #the array
          flipped = np.flip(final_state.full())
          flipped = Qobj(flipped, dims = [[2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]])
          
-         expected_energy = expect(H, flipped)
-         expected_variance = variance(H, flipped)
+         expected_energy = expect(self.H, flipped)
+         expected_variance = variance(self.H, flipped)
          
          return expected_energy, expected_variance
         

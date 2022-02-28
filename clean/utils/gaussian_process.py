@@ -135,7 +135,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                                )
             _check_optimize_result("lbfgs", opt_res)
             theta_opt, func_min = opt_res.x, opt_res.fun
-            print(samples)
 
         elif callable(self.optimizer):
             theta_opt, func_min = self.optimizer(obj_func,
@@ -306,7 +305,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         if show:
             plt.show()
             
-    def get_log_marginal_likelihood(self, show = False, save = True):
+    def get_log_marginal_likelihood(self, show = False, save = True, folder_path = ''):
         fig = plt.figure()
         num = 50
         
@@ -325,13 +324,14 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
                         
         im = plt.imshow(likelihood, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
         
-        print(len(self.kernel_opt_samples))
-        exit()
-        for path_ in self.kernel_opt_samples:
+        tot_paths = 1 + DEFAULT_PARAMS['n_restart_kernel_optimizer']
+        for path_ in self.kernel_opt_samples[-tot_paths:]:
             path_ = np.array(path_)
-            print(path_)
             plt.plot(path_[:,0],  path_[:,1], 'o-', c = 'r')
             plt.scatter(path_[-1, 0], path_[-1,1],  c = 'purple')
+            plt.annotate('0', xy = path_[0])
+            plt.annotate('END', xy = path_[-1])
+             
         plt.xlabel('Corr length')
         plt.ylabel('Constant')
         plt.colorbar(im)
