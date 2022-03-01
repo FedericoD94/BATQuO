@@ -20,7 +20,11 @@ from sklearn.exceptions import ConvergenceWarning
 # It can be straightforwardly extended to other parameters
 class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
-    def __init__(self, depth, kernel_choice, *args, **kwargs):
+    def __init__(self, 
+                 depth, 
+                 kernel_choice, 
+                 seed
+                 ):
         '''Initializes gaussian process class
         
         The class also inherits from Sklearn GaussianProcessRegressor
@@ -46,7 +50,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         self.Y = []
         self.x_best = 0
         self.y_best = np.inf
-        self.seed = DEFAULT_PARAMS["seed"]
+        self.seed = seed
         self.kernel_opt_samples = []
         self.depth = depth
         
@@ -63,8 +67,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         super().__init__(alpha = alpha,
                          kernel = kernel,
                          n_restarts_optimizer =DEFAULT_PARAMS['n_restart_kernel_optimizer'],
-                         normalize_y=DEFAULT_PARAMS['n_restart_kernel_optimizer'],
-                         *args, **kwargs)
+                         normalize_y=DEFAULT_PARAMS['n_restart_kernel_optimizer']
+                         )
         print('\n### GAUSSIAN PROCESS ###')
         print('Initialized kernel: ', self.kernel)
 

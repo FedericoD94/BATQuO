@@ -14,12 +14,17 @@ from qutip import *
 from scipy.stats import qmc
 import pandas as pd
 
-np.random.seed(DEFAULT_PARAMS['seed'])
-random.seed(DEFAULT_PARAMS['seed'])
-
 class qaoa_pulser(object):
 
-    def __init__(self, depth, type_of_graph, lattice_spacing, quantum_noise = None):
+    def __init__(self, 
+                 depth, 
+                 type_of_graph, 
+                 lattice_spacing, 
+                 seed,  
+                 quantum_noise = None):
+                
+        
+        self.seed = seed
         self.C_6_over_h = Chadoq2.interaction_coeff
         self.angles_bounds = np.array(DEFAULT_PARAMS['angle_bounds'])
         self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi #see notes/info.pdf for this value
@@ -33,6 +38,8 @@ class qaoa_pulser(object):
         self.gs_state = None
         self.gs_en = None
         self.deg = None
+        
+        
 
         self.reg = Register(self.qubits_dict)
         self.quantum_noise = quantum_noise
@@ -243,7 +250,7 @@ class qaoa_pulser(object):
         '''
         X , Y , data_train = [], [], []
         
-        hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = DEFAULT_PARAMS['seed'])
+        hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = self.seed)
         X =  hypercube_sampler.random(N_points)
         l_bounds = np.repeat(self.angles_bounds[:,0], self.depth)
         u_bounds = np.repeat(self.angles_bounds[:,1], self.depth)

@@ -11,8 +11,7 @@ from utils.default_params import *
 
 np.set_printoptions(precision = 4, suppress = True)
 np.set_printoptions(threshold=sys.maxsize)
-np.random.seed(DEFAULT_PARAMS['seed'])
-random.seed(DEFAULT_PARAMS['seed'])
+
 
 ###### TRAIN PARAMETERS ##################
 
@@ -28,8 +27,11 @@ average_connectivity = args.average_connectivity
 quantum_noise =  args.quantum_noise
 type_of_graph = args.type_of_graph
 lattice_spacing = args.lattice_spacing
-verbose = args.verbose
+verbose_ = args.verbose
 kernel_choice = args.kernel
+
+np.random.seed(seed)
+random.seed(seed)
 
 ####### CREATE BAYES OPT INSTANCE ########
 bo = Bayesian_optimization(depth,
@@ -39,7 +41,8 @@ bo = Bayesian_optimization(depth,
                            nwarmup,
                            nbayes,
                            kernel_choice,
-                           verbose
+                           seed,
+                           verbose_
                            )
 bo.print_info()        
 bo.init_training(nwarmup)

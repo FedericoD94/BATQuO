@@ -5,6 +5,7 @@ import time
 import datetime
 from ._differentialevolution import DifferentialEvolutionSolver
 import pandas as pd
+import os
 
 
 class Bayesian_optimization():
@@ -17,33 +18,62 @@ class Bayesian_optimization():
                  nwarmup,
                  nbayes,
                  kernel_choice,
-                 verbose,
+                 seed,
+                 verbose_,
                  *args, 
                  **kwargs):
         self.depth = depth
         self.nwarmup = nwarmup
         self.nbayes = nbayes
+        self.seed = seed
         
         ### CREATE QAOA
-        self.qaoa = qaoa_pulser(depth, type_of_graph, lattice_spacing, quantum_noise)
+        self.qaoa = qaoa_pulser(depth, 
+                                type_of_graph, 
+                                lattice_spacing,
+                                seed,
+                                quantum_noise)
+                                
         self.qaoa.calculate_physical_gs()
         self.lattice_spacing = lattice_spacing
 
         ### CREATE GP 
-        self.gp = MyGaussianProcessRegressor(depth = depth, kernel_choice = kernel_choice)
+        self.gp = MyGaussianProcessRegressor(depth = depth, 
+                                             kernel_choice = kernel_choice,
+                                             seed = seed)
+        
+        ### Training parameters
+        self.kernel_matrices = []
+        self.likelihood_landscapes = []
+        self.optimization_kernel = []
   
         
+    def angle_names_string(self):
+        gamma_names = [f'GAMMA_{i}' for i in range(self.depth)]
+        beta_names = [f'BETA_{i}' for i in range(self.depth)]
+        
+        angle_names = []
+        for i in range(self.depth):
+            angle_names.append(beta_names[i])
+            angle_names.append(gamma_names[i])
+            
+        return angle_names
+        
+        
     def print_info(self):
-        self.folder_name = 'results/'
-        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_spacing_{self.lattice_spacing}'
-        gamma_names = ['GAMMA_' + str(i)  for i in range(self.depth)]
-        beta_names = ['BETA_' + str(i) for i in range(self.depth)]
-        self.data_names = ['iter'] + gamma_names \
-                                   + beta_names \
+        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_spacing_{self.lattice_spacing}_seed_{self.seed}'
+                            
+        self.folder_name = 'results/' + self.file_name + '/'
+        os.makedirs(self.folder_name, exist_ok = True)
+        angle_names = self.angle_names_string()
+        
+        self.data_names = ['iter'] + angle_names \
                                    + ['energy_sampled',
-                                      'energy_solution',
-                                      'energy_ratio', 
+                                      'classical_solution',
+                                      'ratio_sampled_classical', 
                                       'energy_exact',
+                                      'energy_gs',
+                                      'ratio_exact_gs',
                                       'energy_best',
                                       'variance_sampled', 
                                       'variance_exact',
@@ -101,13 +131,16 @@ class Bayesian_optimization():
         energy_best = np.max([data_train[i]['energy_sampled'] for i in range(len(X_train))])
         fidelity_best = np.max([data_train[i]['fidelity_sampled'] for i in range(len(X_train))])
         solution_ratio_best = np.max([data_train[i]['solution_ratio'] for i in range(len(X_train))])
+        gs_en = self.qaoa.gs_en
         for i, x in enumerate(X_train):
             self.data_.append([i +1] 
                                + x  
                                +[y_train[i], 
                                 self.qaoa.solution_energy, 
-                                y_train[i]/ self.qaoa.solution_energy,
+                                1 - y_train[i]/ self.qaoa.solution_energy,
                                 data_train[i]['energy_exact'],
+                                gs_en, 
+                                1 - data_train[i]['energy_exact']/gs_en,
                                 energy_best,
                                 data_train[i]['variance_sampled'], 
                                 data_train[i]['variance_exact'],
@@ -202,7 +235,8 @@ class Bayesian_optimization():
             
             ### QAOA on new point ###
             qaoa_results = self.qaoa.apply_qaoa(next_point)
-            y_next_point = qaoa_results['energy_sampled']
+            energy_sampled = qaoa_results['energy_sampled']
+            y_next_point = energy_sampled
             best_point, energy_best, where_ = self.gp.get_best_point()
             fidelity_best = np.max((fidelity_best, 
                                         qaoa_results['fidelity_sampled']))
@@ -213,7 +247,7 @@ class Bayesian_optimization():
             
             
             self.gp.fit(next_point, y_next_point)
-            #self.gp.get_log_marginal_likelihood(show = False, save = False)
+            #lik = self.gp.get_log_marginal_likelihood(show = False, save = False)
             constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
             
             
@@ -221,12 +255,15 @@ class Bayesian_optimization():
             step_time = time.time() - start_time
             
             solution = self.qaoa.solution_energy
+            gs_en = self.qaoa.gs_en
             new_data = ([i+self.nwarmup] 
                            + next_point  
                            + [y_next_point, 
                              solution, 
                              1 - y_next_point/solution, 
                              qaoa_results['energy_exact'],
+                             gs_en,
+                             1 - qaoa_results['energy_exact']/gs_en,
                              energy_best,
                              qaoa_results['variance_sampled'], 
                              qaoa_results['variance_exact'],
