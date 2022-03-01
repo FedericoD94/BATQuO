@@ -251,7 +251,7 @@ class qaoa_pulser(object):
         X = X.tolist()
         for x in X:
             qaoa_results = self.apply_qaoa(x)
-            Y.append(qaoa_results['sampled_energy'])
+            Y.append(qaoa_results['energy_sampled'])
             data_train.append(qaoa_results)
         
         return X, Y, data_train
@@ -443,20 +443,20 @@ class qaoa_pulser(object):
         results_dict['evolution_states'] = evolution_states
         
         sampled_energy, sampled_variance = self.calculate_sampled_energy_and_variance(sampled_state)
-        results_dict['sampled_energy'] = sampled_energy
-        results_dict['sampled_variance'] = sampled_variance
-        results_dict['sampled_fidelity'] = self.calculate_fidelity_sampled(sampled_state)
+        results_dict['energy_sampled'] = sampled_energy
+        results_dict['variance_sampled'] = sampled_variance
+        results_dict['fidelity_sampled'] = self.calculate_fidelity_sampled(sampled_state)
         
         exact_energy, exact_variance = self.calculate_exact_energy_and_variance(evolution_states[-1])
-        results_dict['exact_energy'] = exact_energy
-        results_dict['exact_variance'] = exact_variance 
+        results_dict['energy_exact'] = exact_energy
+        results_dict['variance_exact'] = exact_variance 
         results_dict['solution_ratio'] = self.solution_ratio(sampled_state)
 
         if self.quantum_noise is None:
-            results_dict['exact_fidelity'] = self.fidelity_gs_exact(evolution_states[-1])
+            results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
 
         else:
-            results_dict['exact_fidelity'] = 0
+            results_dict['fidelity_exact'] = 0
         
         if show:
             self.plot_final_state_distribution(sampled_state)

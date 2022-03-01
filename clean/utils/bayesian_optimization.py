@@ -40,20 +40,23 @@ class Bayesian_optimization():
         beta_names = ['BETA_' + str(i) for i in range(self.depth)]
         self.data_names = ['iter'] + gamma_names \
                                    + beta_names \
-                                   + ['energy',
+                                   + ['energy_sampled',
                                       'energy_solution',
                                       'energy_ratio', 
-                                      'exact_energy',
-                                      'sampled_variance', 
-                                      'exact_variance',
+                                      'energy_exact',
+                                      'energy_best',
+                                      'variance_sampled', 
+                                      'variance_exact',
                                       'fidelity_exact', 
-                                      'fidelity_sampled', 
-                                      'ratio_solution', 
+                                      'fidelity_sampled',
+                                      'fidelity_best', 
+                                      'ratio_solution',
+                                      'ratio_solution_best', 
                                       'corr_length', 
                                       'const_kernel',
                                       'std_energies', 
                                       'average_distances', 
-                                      'nit', 
+                                      'n_iterations', 
                                       'time_opt_bayes', 
                                       'time_qaoa', 
                                       'time_opt_kernel', 
@@ -95,18 +98,24 @@ class Bayesian_optimization():
         
         kernel_params = np.exp(self.gp.kernel_.theta)
         self.data_ = []
+        energy_best = np.max([data_train[i]['energy_sampled'] for i in range(len(X_train))])
+        fidelity_best = np.max([data_train[i]['fidelity_sampled'] for i in range(len(X_train))])
+        solution_ratio_best = np.max([data_train[i]['solution_ratio'] for i in range(len(X_train))])
         for i, x in enumerate(X_train):
             self.data_.append([i +1] 
                                + x  
                                +[y_train[i], 
                                 self.qaoa.solution_energy, 
                                 y_train[i]/ self.qaoa.solution_energy,
-                                data_train[i]['exact_energy'],
-                                data_train[i]['sampled_variance'], 
-                                data_train[i]['exact_variance'],
-                                data_train[i]['sampled_fidelity'],
-                                data_train[i]['exact_fidelity'], 
-                                data_train[i]['solution_ratio']] 
+                                data_train[i]['energy_exact'],
+                                energy_best,
+                                data_train[i]['variance_sampled'], 
+                                data_train[i]['variance_exact'],
+                                data_train[i]['fidelity_sampled'],
+                                data_train[i]['fidelity_exact'], 
+                                fidelity_best,
+                                data_train[i]['solution_ratio'],
+                                solution_ratio_best]
                                +[kernel_params[0], 
                                  kernel_params[1], 
                                  0, 0, 0, 0, 0, 0, 0])
@@ -172,47 +181,60 @@ class Bayesian_optimization():
             return True
             
     def run_optimization(self):
+    
+        fidelity_best = 0
+        solution_ratio_best = 0
+        
         print('Training ...')
         for i in range(self.nbayes):
             start_time = time.time()
+            
+            #### BAYES OPT ####
             next_point, n_it, avg_sqr_distances, std_pop_energy = self.bayesian_opt_step()
             next_point = [int(i) for i in next_point]
             check_ = self.check_proposed_point(next_point)
             if not check_:
-                print('Found the same point twice {next_point} by the optimization')
+                print(f'Found the same point twice {next_point} by the optimization')
                 print('ending optimization')
                 break
             
             bayes_time = time.time() - start_time
             
+            ### QAOA on new point ###
             qaoa_results = self.qaoa.apply_qaoa(next_point)
-            y_next_point = qaoa_results['sampled_energy']
+            y_next_point = qaoa_results['energy_sampled']
+            best_point, energy_best, where_ = self.gp.get_best_point()
+            fidelity_best = np.max((fidelity_best, 
+                                        qaoa_results['fidelity_sampled']))
+            solution_ratio_best = np.max((solution_ratio_best,
+                                            qaoa_results['solution_ratio']))
             
             qaoa_time = time.time() - start_time - bayes_time
             
-            constant_kernel,corr_length = np.exp(self.gp.kernel_.theta)
-            
-            print(f'iteration: {i +1}/{self.nbayes}  {next_point}'
-                    f' en/ratio: {y_next_point/self.qaoa.solution_energy}'
-                    ' en: {}, fid: {}'.format(y_next_point, qaoa_results['sampled_fidelity'])
-                    )
             
             self.gp.fit(next_point, y_next_point)
-            self.gp.get_log_marginal_likelihood(show = False, save = False)
+            #self.gp.get_log_marginal_likelihood(show = False, save = False)
+            constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
+            
+            
             kernel_time = time.time() - start_time - qaoa_time - bayes_time
             step_time = time.time() - start_time
-
+            
+            solution = self.qaoa.solution_energy
             new_data = ([i+self.nwarmup] 
                            + next_point  
                            + [y_next_point, 
-                             self.qaoa.solution_energy, 
-                             y_next_point/self.qaoa.solution_energy, 
-                             qaoa_results['exact_energy'],
-                             qaoa_results['sampled_variance'], 
-                             qaoa_results['exact_variance'],
-                             qaoa_results['sampled_fidelity'],
-                             qaoa_results['exact_fidelity'], 
+                             solution, 
+                             1 - y_next_point/solution, 
+                             qaoa_results['energy_exact'],
+                             energy_best,
+                             qaoa_results['variance_sampled'], 
+                             qaoa_results['variance_exact'],
+                             qaoa_results['fidelity_sampled'],
+                             qaoa_results['fidelity_exact'], 
+                             fidelity_best,
                              qaoa_results['solution_ratio'], 
+                             solution_ratio_best,
                              corr_length, 
                              constant_kernel, 
                              std_pop_energy, 
@@ -223,10 +245,11 @@ class Bayesian_optimization():
                              kernel_time, 
                              step_time]  )
 
-            # format_list = ['%+.6f '] * len(new_data)
-#             format_list[0] = '% 4d '
-#             self.fmt_string = "".join(format_list) 
-
+            print(f'iteration: {i +1}/{self.nbayes}  {next_point}'
+                    f' (E - E_0)/E_0: {1 - y_next_point/self.qaoa.solution_energy}'
+                    ' en: {}, fid: {}'.format(y_next_point, qaoa_results['fidelity_sampled'])
+                    )
+                    
             self.data_.append(new_data)
             df = pd.DataFrame(data = self.data_, columns = self.data_names)
             df.to_csv(self.folder_name + self.data_file_name, columns = self.data_names, header = self.data_header)
