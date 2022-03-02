@@ -44,13 +44,24 @@ class qaoa_pulser(object):
         self.reg = Register(self.qubits_dict)
         self.quantum_noise = quantum_noise
         if quantum_noise is not None:
-            self.noise_config = SimConfig(noise=(self.quantum_noise),
+            if quantum_noise == 'all':
+                noise = ('SPAM', 'dephasing', 'doppler', 'amplitude')
+                
+                self.noise_config = SimConfig(noise=noise,
                                           eta = Q_DEVICE_PARAMS['eta'],
                                           epsilon = Q_DEVICE_PARAMS['epsilon'],
                                           epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
                                           temperature = Q_DEVICE_PARAMS['temperature'],
                                           laser_waist = Q_DEVICE_PARAMS['laser_waist'],
                                           )
+            else:
+                self.noise_config = SimConfig(noise=(self.quantum_noise),
+                                              eta = Q_DEVICE_PARAMS['eta'],
+                                              epsilon = Q_DEVICE_PARAMS['epsilon'],
+                                              epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
+                                              temperature = Q_DEVICE_PARAMS['temperature'],
+                                              laser_waist = Q_DEVICE_PARAMS['laser_waist'],
+                                              )
             self.noise_info = self.noise_config.__str__()
         
         

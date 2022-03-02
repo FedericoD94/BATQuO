@@ -45,8 +45,7 @@ class Bayesian_optimization():
         ### Training parameters
         self.kernel_matrices = []
         self.likelihood_landscapes = []
-        self.optimization_kernel = []
-  
+      
         
     def angle_names_string(self):
         gamma_names = [f'GAMMA_{i}' for i in range(self.depth)]
@@ -247,7 +246,20 @@ class Bayesian_optimization():
             
             
             self.gp.fit(next_point, y_next_point)
-            #lik = self.gp.get_log_marginal_likelihood(show = False, save = False)
+            likelihood_landscape = self.gp.get_log_marginal_likelihood(show = False, 
+                                                                        save = False)
+            cov_matrix = self.gp.get_covariance_matrix()
+            optimization_samples = self.gp.kernel_opt_samples
+            self.likelihood_landscapes.append(likelihood_landscape)
+            self.kernel_matrices.append(cov_matrix.tolist())
+            
+            
+            np.save(self.folder_name + 'likelihoods', 
+                        self.likelihood_landscapes)  #saved in binary bc its is 3d
+            np.save(self.folder_name + 'cov_matrices', 
+                         np.array(self.kernel_matrices)) 
+            np.save(self.folder_name + 'optimization_kernel', 
+                         optimization_samples) 
             constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
             
             

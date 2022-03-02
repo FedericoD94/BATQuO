@@ -8,7 +8,6 @@ from utils.bayesian_optimization import *
 from utils.default_params import *
 
 
-
 np.set_printoptions(precision = 4, suppress = True)
 np.set_printoptions(threshold=sys.maxsize)
 
