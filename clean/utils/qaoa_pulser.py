@@ -264,8 +264,8 @@ class qaoa_pulser(object):
         
         hypercube_sampler = qmc.LatinHypercube(d=self.depth*2, seed = self.seed)
         X =  hypercube_sampler.random(N_points)
-        l_bounds = np.repeat(self.angles_bounds[:,0], self.depth)
-        u_bounds = np.repeat(self.angles_bounds[:,1], self.depth)
+        l_bounds = self.angles_bounds[:,0]
+        u_bounds = self.angles_bounds[:,1]
         X = qmc.scale(X, l_bounds, u_bounds).astype(int)
         X = X.tolist()
         for x in X:
@@ -474,11 +474,8 @@ class qaoa_pulser(object):
         results_dict['variance_exact'] = exact_variance 
         results_dict['solution_ratio'] = self.solution_ratio(sampled_state)
 
-        #if self.quantum_noise is None:
         results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
 
-        #else:
-            #results_dict['fidelity_exact'] = 0
         
         if show:
             self.plot_final_state_distribution(sampled_state)

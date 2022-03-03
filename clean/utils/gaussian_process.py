@@ -188,7 +188,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
     def scale_down(self, point):
         'Rescales a(many) point(s) from angles bounds to [0,1]'
 
-        min_gamma, max_gamma=self.angles_bounds[0]
+        min_gamma, max_gamma = self.angles_bounds[0]
         min_beta,  max_beta = self.angles_bounds[1]
         
         norm = []
