@@ -26,9 +26,12 @@ class Bayesian_optimization():
         self.nwarmup = nwarmup
         self.nbayes = nbayes
         self.seed = seed
+        angles_bounds = self.define_angles_boundaries(depth)
         
+                
         ### CREATE QAOA
         self.qaoa = qaoa_pulser(depth, 
+                                angles_bounds,
                                 type_of_graph, 
                                 lattice_spacing,
                                 seed,
@@ -39,12 +42,25 @@ class Bayesian_optimization():
 
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, 
+                                             angles_bounds = angles_bounds,
                                              kernel_choice = kernel_choice,
                                              seed = seed)
         
         ### Training parameters
         self.kernel_matrices = []
         self.likelihood_landscapes = []
+        
+    def define_angles_boundaries(self, depth):
+        if depth == 1:
+            angle_bounds = [[100, 2000], [100, 2000]]
+        if depth == 2:
+            angle_bounds = [[100, 1500] for _ in range(depth*2)]
+        if depth == 3:
+            angle_bounds = [[100, 1000] for _ in range(depth*2)]
+        else:
+            angle_bounds = [[100, 800] for _ in range(depth*2)]
+            
+        return np.array(angle_bounds)
       
         
     def angle_names_string(self):

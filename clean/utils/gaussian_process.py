@@ -22,6 +22,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
 
     def __init__(self, 
                  depth, 
+                 angles_bounds,
                  kernel_choice, 
                  seed
                  ):
@@ -45,7 +46,7 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         '''
         self.max_iter = DEFAULT_PARAMS['max_iter_lfbgs']
         self.gtol = DEFAULT_PARAMS['gtol']
-        self.angles_bounds = DEFAULT_PARAMS['angle_bounds']
+        self.angles_bounds = angles_bounds
         self.X = []
         self.Y = []
         self.x_best = 0

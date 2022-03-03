@@ -18,6 +18,7 @@ class qaoa_pulser(object):
 
     def __init__(self, 
                  depth, 
+                 angles_bounds,
                  type_of_graph, 
                  lattice_spacing, 
                  seed,  
@@ -26,7 +27,7 @@ class qaoa_pulser(object):
         
         self.seed = seed
         self.C_6_over_h = Chadoq2.interaction_coeff
-        self.angles_bounds = np.array(DEFAULT_PARAMS['angle_bounds'])
+        self.angles_bounds = angles_bounds
         self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi #see notes/info.pdf for this value
         self.delta = Q_DEVICE_PARAMS['delta_over_2pi'] * 2 * np.pi #see notes/info.pdf for the calculation
         self.lattice_spacing = lattice_spacing
@@ -423,8 +424,9 @@ class qaoa_pulser(object):
          
          #Qutip and the results from pulser have opposite endians so we need to flip
          #the array
+         final_state_dims = final_state.dims
          flipped = np.flip(final_state.full())
-         flipped = Qobj(flipped, dims = [[2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]])
+         flipped = Qobj(flipped, dims = final_state.dims)
          
          expected_energy = expect(self.H, flipped)
          expected_variance = variance(self.H, flipped)
@@ -465,6 +467,7 @@ class qaoa_pulser(object):
         results_dict['variance_sampled'] = sampled_variance
         results_dict['fidelity_sampled'] = self.calculate_fidelity_sampled(sampled_state)
         
+        #print('final state is ', evolution_states[-1])
         exact_energy, exact_variance = self.calculate_exact_energy_and_variance(evolution_states[-1])
         results_dict['energy_exact'] = exact_energy
         results_dict['variance_exact'] = exact_variance 
