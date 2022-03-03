@@ -386,8 +386,9 @@ class qaoa_pulser(object):
         Return the fidelity of the exact qaoa state (obtained with qutip) and the 
         exact groundstate calculated with the physical hamiltonian of pulser
         '''
+        final_state_dims = final_state.dims
         flipped = np.flip(final_state.full())
-        flipped = Qobj(flipped, dims = [[2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]])
+        flipped = Qobj(flipped, dims = final_state.dims)
         overlap = self.gs_state.overlap(flipped)
         fidelity =  np.abs(overlap)**2
 
@@ -473,11 +474,11 @@ class qaoa_pulser(object):
         results_dict['variance_exact'] = exact_variance 
         results_dict['solution_ratio'] = self.solution_ratio(sampled_state)
 
-        if self.quantum_noise is None:
-            results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
+        #if self.quantum_noise is None:
+        results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
 
-        else:
-            results_dict['fidelity_exact'] = 0
+        #else:
+            #results_dict['fidelity_exact'] = 0
         
         if show:
             self.plot_final_state_distribution(sampled_state)
