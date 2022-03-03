@@ -59,8 +59,6 @@ class Bayesian_optimization():
             angle_bounds = [[100, 1000] for _ in range(depth*2)]
         else:
             angle_bounds = [[100, 800] for _ in range(depth*2)]
-        print(angle_bounds)
-        exit()
             
         return np.array(angle_bounds)
       
