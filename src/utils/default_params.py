@@ -32,5 +32,5 @@ Q_DEVICE_PARAMS = {'type_of_lattice': 'triangular',
                    'temperature': 30, #microKelvin
                    'coherence_time': 5000, #ns
                    'omega_over_2pi': 1, #see notes/info.pdf for this value
-                   'delta_over_2pi': -3.1 #see notes/info.pdf for the calculation
+                   'omega_off_over_2pi': 0
 }

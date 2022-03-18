@@ -24,14 +24,19 @@ class qaoa_pulser(object):
                  seed,  
                  quantum_noise = None):
                 
-        
         self.seed = seed
         self.C_6_over_h = Chadoq2.interaction_coeff
-        self.angles_bounds = angles_bounds
-        self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi #see notes/info.pdf for this value
-        self.delta = Q_DEVICE_PARAMS['delta_over_2pi'] * 2 * np.pi #see notes/info.pdf for the calculation
+        #see notes/info.pdf for this value
+        self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi 
+        self.omega_off = Q_DEVICE_PARAMS['omega_off_over_2pi'] * 2 * np.pi
+        self.delta = self.delta_from_omega(
+                                            self.omega,
+                                            self.omega_off
+                                            )
+        self.rydberg_radius = Chadoq2.rydberg_blockade_radius(self.omega)
         self.lattice_spacing = lattice_spacing
         self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
+        self.angles_bounds = angles_bounds
         self.depth = depth
         self.G, self.qubits_dict = self.generate_graph(type_of_graph)
         self.solution, self.solution_energy = self.classical_solution()
@@ -76,11 +81,32 @@ class qaoa_pulser(object):
         f.write(f'Omega: {self.omega} ')
         f.write(f'delta: {self.delta} ')
         f.write(f'U: {self.U}\n')
+        f.write(f'Ryd radius: {self.rydberg_radius}')
+        f.write(f'Lattice spacing: {self.lattice_spacing}')
         f.write(f'Graph: {self.G.edges}\n')
         f.write(f'Classical sol: {self.solution}\n')
         if self.quantum_noise is not None:
             f.write(f'Noise info: {self.noise_info}')
         f.write('\n')
+        
+    def Omega_from_b(self, omega, delta_i, omega_r):
+        
+        return omega * 2 * delta_i / omega_r
+        
+    def lightshift_function(self, omega):
+        delta_i = 700 * 2 * np.pi #MHz
+        Omega_r = 30  * 2 * np.pi #MHz
+        
+        l_shift = (Omega_r**2 
+                   - self.Omega_from_b(omega, delta_i, Omega_r)**2)/(4*delta_i)
+                     
+        
+        return l_shift
+        
+    def delta_from_omega(self, omega_on, omega_off):
+    
+        return self.lightshift_function(omega_on) \
+                - self.lightshift_function(omega_off)
         
     def generate_graph(self, type_of_graph): 
         '''
@@ -100,7 +126,6 @@ class qaoa_pulser(object):
         else:
             print('type of graph not supported')
             
-        rydberg_radius = Chadoq2.rydberg_blockade_radius(self.omega)
         G = nx.Graph()
         edges=[]
         distances = []
@@ -108,14 +133,14 @@ class qaoa_pulser(object):
             for m in range(n+1, len(pos)):
                 pwd = ((pos[m][0]-pos[n][0])**2+(pos[m][1]-pos[n][1])**2)**0.5
                 distances.append(pwd)
-                if pwd < rydberg_radius:
+                if pwd < self.rydberg_radius:
                     edges.append([n,m]) # Below rbr, vertices are connected
                     self.U.append(self.C_6_over_h/(pwd**6)) #And the interaction is given by C_6/(h*d^6)
         G.add_nodes_from(range(len(pos)))
         G.add_edges_from(edges)
         print('\n###### CREATED GRAPH ######\n')
         print(G.nodes, G.edges)
-        print('Rydberg Radius: ', rydberg_radius)
+        print('Rydberg Radius: ', self.rydberg_radius)
         print('Lattice spacing: ', a)
         
         return G, dict(enumerate(pos))
@@ -245,6 +270,9 @@ class qaoa_pulser(object):
         print('Mixing: \u03A9 \u03A3 X_i\n')
         print('\u03b4: ', self.delta, '\n\u03A9: ', self.omega, '\nU: ', self.U[0])
         print('Rydberg condition U/\u03A9: ', self.U[0]/self.omega)
+        print(f'Ryd radius: {self.rydberg_radius}')
+        print(f'Lattice spacing: {self.lattice_spacing}')
+        print(f'coeff_hbar: {self.C_6_over_h}')
         print('Groundstate energy: ', gs_en)
         print('Degeneracy: ', deg)
         
@@ -504,4 +532,19 @@ class qaoa_pulser(object):
             
         return results_dict
                 
-        
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                

@@ -325,23 +325,23 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         for i, ascissa in enumerate(ascisse):
             for j, ordinata in enumerate(ordinate):
                 likelihood[j, i] = self.log_marginal_likelihood([ascissa, ordinata])
-                        
-        im = plt.imshow(likelihood, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
+        if show or save:             
+            im = plt.imshow(likelihood, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
         
-        tot_paths = 1 + DEFAULT_PARAMS['n_restart_kernel_optimizer']
-        for path_ in self.kernel_opt_samples[-tot_paths:]:
-            path_ = np.array(path_)
-            plt.plot(path_[:,0],  path_[:,1], 'o-', c = 'r')
-            plt.scatter(path_[-1, 0], path_[-1,1],  c = 'purple')
-            plt.annotate('0', xy = path_[0])
-            plt.annotate('END', xy = path_[-1])
+            tot_paths = 1 + DEFAULT_PARAMS['n_restart_kernel_optimizer']
+            for path_ in self.kernel_opt_samples[-tot_paths:]:
+                path_ = np.array(path_)
+                plt.plot(path_[:,0],  path_[:,1], 'o-', c = 'r')
+                plt.scatter(path_[-1, 0], path_[-1,1],  c = 'purple')
+                plt.annotate('0', xy = path_[0])
+                plt.annotate('END', xy = path_[-1])
              
-        plt.xlabel('Corr length')
-        plt.ylabel('Constant')
-        plt.colorbar(im)
-        max = np.max(likelihood)
-        plt.clim(max-5, max*1.1)
-        plt.title('log_marg_likelihood iter:{} kernel_{}'.format(len(self.X), self.kernel_))
+            plt.xlabel('Corr length')
+            plt.ylabel('Constant')
+            plt.colorbar(im)
+            max = np.max(likelihood)
+            plt.clim(max-5, max*1.1)
+            plt.title('log_marg_likelihood iter:{} kernel_{}'.format(len(self.X), self.kernel_))
         if save:
             plt.savefig('data/marg_likelihood_iter={}_kernel={}.png'.format(len(self.X), self.kernel_))
         if show:

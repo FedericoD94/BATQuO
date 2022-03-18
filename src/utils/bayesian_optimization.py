@@ -22,7 +22,7 @@ class Bayesian_optimization():
                  verbose_,
                  *args, 
                  **kwargs):
-                 
+             
         self.depth = depth
         self.nwarmup = nwarmup
         self.nbayes = nbayes
@@ -37,7 +37,6 @@ class Bayesian_optimization():
                                 lattice_spacing,
                                 seed,
                                 quantum_noise)
-                    
         self.lattice_spacing = lattice_spacing
 
         ### CREATE GP 
@@ -49,27 +48,27 @@ class Bayesian_optimization():
         ### Training parameters
         self.kernel_matrices = []
         self.likelihood_landscapes = []
+        self.final_states = []
         
         
     def define_angles_boundaries(self, depth):
-    
-        if depth == 1:
-            angle_bounds = [
-                            [100, 2000], 
-                            [100, 2000]
-                            ]
-        if depth == 2:
-            angle_bounds = [
-                            [100, 1500] for _ in range(depth*2)
-                            ]
-        if depth == 3:
-            angle_bounds = [
-                            [100, 1000] for _ in range(depth*2)
-                            ]
-        else:
-            angle_bounds = [
-                            [100, 800] for _ in range(depth*2)
-                            ]
+        # if depth == 1:
+#             angle_bounds = [
+#                             [100, 2000], 
+#                             [100, 2000]
+#                             ]
+#         elif depth == 2:
+#             angle_bounds = [
+#                             [100, 1500] for _ in range(depth*2)
+#                             ]
+#         elif depth == 3:
+#             angle_bounds = [
+#                             [100, 1000] for _ in range(depth*2)
+#                             ]
+#         else:
+        angle_bounds = [
+                        [100, 800] for _ in range(depth*2)
+                        ]
             
         return np.array(angle_bounds)
       
@@ -89,7 +88,7 @@ class Bayesian_optimization():
     def print_info(self):
         self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_spacing_{self.lattice_spacing}_seed_{self.seed}'
                             
-        self.folder_name = 'results/' + self.file_name + '/'
+        self.folder_name = 'output/' + self.file_name + '/'
         os.makedirs(self.folder_name, exist_ok = True)
         angle_names = self.angle_names_string()
         
@@ -251,11 +250,11 @@ class Bayesian_optimization():
             #### BAYES OPT ####
             next_point, n_it, avg_sqr_distances, std_pop_energy = self.bayesian_opt_step()
             next_point = [int(i) for i in next_point]
-            check_ = self.check_proposed_point(next_point)
-            if not check_:
-                print(f'Found the same point twice {next_point} by the optimization')
-                print('ending optimization')
-                break
+            # check_ = self.check_proposed_point(next_point)
+#             if not check_:
+#                 print(f'Found the same point twice {next_point} by the optimization')
+#                 print('ending optimization')
+#                 break
             
             bayes_time = time.time() - start_time
             
@@ -279,12 +278,15 @@ class Bayesian_optimization():
             optimization_samples = self.gp.kernel_opt_samples
             self.likelihood_landscapes.append(likelihood_landscape)
             self.kernel_matrices.append(cov_matrix.tolist())
+            self.final_states.append(qaoa_results['evolution_states'][-1])
             
             
             np.save(self.folder_name + 'likelihoods', 
                         self.likelihood_landscapes)  #saved in binary bc its is 3d
             np.save(self.folder_name + 'cov_matrices', 
                          np.array(self.kernel_matrices)) 
+            np.save(self.folder_name + 'final_states', 
+                         np.array(self.final_states)) 
             np.save(self.folder_name + 'optimization_kernel', 
                          optimization_samples) 
             constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
@@ -328,8 +330,9 @@ class Bayesian_optimization():
                     
             self.data_.append(new_data)
             df = pd.DataFrame(data = self.data_, columns = self.data_names)
-            df.to_csv(self.folder_name + self.data_file_name, columns = self.data_names, header = self.data_header)
-            #np.savetxt(self.folder_name + self.data_file_name, self.data_, fmt = self.fmt_string, header = self.data_header)
+            df.to_csv(self.folder_name + self.data_file_name, 
+                      columns = self.data_names, 
+                      header = self.data_header)
             
         best_x, best_y, where = self.gp.get_best_point()
         self.data_.append(self.data_[where])
