@@ -127,7 +127,7 @@ class qaoa_pulser(object):
         '''
         if type_of_graph == 'chair':
             a = self.lattice_spacing
-            pos =[
+            pos_ =[
                   [0, 0], 
                   [a, 0], 
                   [3/2 * a, np.sqrt(3)/2 * a], 
@@ -135,33 +135,46 @@ class qaoa_pulser(object):
                   [2 * a, 0], 
                   [3 * a, 0]
                   ]
-        # if type_of_graph == 'butterfly':
-#             a = self.lattice_spacing
-#             pos = [
-#                    [0,0],
-#                     
-#             ]
+        if type_of_graph == 'butterfly':
+            a = self.lattice_spacing
+            pos_ = [
+                   [0, 0],
+                   [0, a],
+                   [0, a * 2],
+                   [np.sqrt(3) * 1/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 1/2 * a, 3/2 * a],
+                   [np.sqrt(3) * a, a],
+                   [np.sqrt(3) * 3/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 3/2 * a, 3/2 * a],
+                   [np.sqrt(3) * 2 * a, 0],
+                   [np.sqrt(3) * 2 * a, a],
+                   [np.sqrt(3) * 2 * a, a * 2]
+            ]
         else:
             print('type of graph not supported')
             
         G = nx.Graph()
         edges=[]
         distances = []
-        for n in range(len(pos)-1):
-            for m in range(n+1, len(pos)):
-                pwd = ((pos[m][0]-pos[n][0])**2+(pos[m][1]-pos[n][1])**2)**0.5
+        for n in range(len(pos_)-1):
+            for m in range(n+1, len(pos_)):
+                pwd = (
+                         (pos_[m][0]-pos_[n][0])**2
+                        +(pos_[m][1]-pos_[n][1])**2)**0.5
                 distances.append(pwd)
                 if pwd < self.rydberg_radius:
-                    edges.append([n,m]) # Below rbr, vertices are connected
-                    self.U.append(self.C_6_over_h/(pwd**6)) #And the interaction is given by C_6/(h*d^6)
-        G.add_nodes_from(range(len(pos)))
+                    # Below rbr, vertices are connected
+                    edges.append([n,m]) 
+                    #And the interaction is given by C_6/(h*d^6)
+                    self.U.append(self.C_6_over_h/(pwd**6)) 
+        G.add_nodes_from(range(len(pos_)))
         G.add_edges_from(edges)
         print('\n###### CREATED GRAPH ######\n')
         print(G.nodes, G.edges)
         print('Rydberg Radius: ', self.rydberg_radius)
         print('Lattice spacing: ', a)
         
-        return G, dict(enumerate(pos))
+        return G, dict(enumerate(pos_))
         
     def classical_solution(self):
         '''

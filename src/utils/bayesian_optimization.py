@@ -37,7 +37,7 @@ class Bayesian_optimization():
                                 lattice_spacing,
                                 seed,
                                 quantum_noise)
-        self.lattice_spacing = lattice_spacing
+        self.type_of_graph = type_of_graph
 
         ### CREATE GP 
         self.gp = MyGaussianProcessRegressor(depth = depth, 
@@ -86,7 +86,10 @@ class Bayesian_optimization():
         
         
     def print_info(self):
-        self.file_name = f'p={self.depth}_warmup={self.nwarmup}_train={self.nbayes}_spacing_{self.lattice_spacing}_seed_{self.seed}'
+        self.file_name = (f'p={self.depth}_warmup={self.nwarmup}_'
+                         f'train={self.nbayes}_'
+                         f'graph_{self.type_of_graph}_'
+                         f'_seed_{self.seed}')
                             
         self.folder_name = 'output/' + self.file_name + '/'
         os.makedirs(self.folder_name, exist_ok = True)
@@ -117,8 +120,7 @@ class Bayesian_optimization():
                                       'time_opt_kernel', 
                                       'time_step']
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
-
-
+        
         info_file_name = self.folder_name + self.file_name + '_info.txt'
         with open(info_file_name, 'w') as f:
             f.write('BAYESIAN OPTIMIZATION of QAOA \n\n')
