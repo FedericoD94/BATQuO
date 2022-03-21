@@ -526,8 +526,14 @@ class qaoa_pulser(object):
         Returns
         -------
             results_dict: Dictionary with all the info of the qaoa final state:
-                          sampled_state, sampled_energy, sampled_variance, exact_energy
-                          exact_variance, sampled_fidelity, exact_fidelity, solution_ratio
+                          sampled_state, 
+                          sampled_energy, 
+                          sampled_variance, 
+                          exact_energy
+                          exact_variance, 
+                          sampled_fidelity, 
+                          exact_fidelity, 
+                          solution_ratio
                           states of the evolution
             
         '''

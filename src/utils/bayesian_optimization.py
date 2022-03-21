@@ -28,7 +28,6 @@ class Bayesian_optimization():
         self.nbayes = nbayes
         self.seed = seed
         angles_bounds = self.define_angles_boundaries(depth)
-        
                 
         ### CREATE QAOA
         self.qaoa = qaoa_pulser(depth, 
@@ -37,6 +36,8 @@ class Bayesian_optimization():
                                 lattice_spacing,
                                 seed,
                                 quantum_noise)
+        self.qaoa.apply_qaoa([238,458,596,800], show = True)
+        exit()
         self.type_of_graph = type_of_graph
 
         ### CREATE GP 

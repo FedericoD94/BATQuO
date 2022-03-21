@@ -13,6 +13,10 @@ np.set_printoptions(precision = 4, suppress = True)
 np.set_printoptions(threshold=sys.maxsize)
 
 
+'''
+Runs a qaoa sequence of angles for num_repetition times with different seeds
+Saves the result of each simulation in a pdf dataframe.
+'''
 ###### TRAIN PARAMETERS ##################
 
 args = parse_command_line()
@@ -34,18 +38,10 @@ np.random.seed(seed)
 random.seed(seed)
 
 ####### CREATE BAYES OPT INSTANCE ########
-list_angles = [[704,428],
-[456,300],
-[192, 428],
-[456,224,656,592],
-[702,436,604,752],
-[796,732,792,336],
-[100,344,488,848],
-[264,932,380,576,768,576],
-[100, 100, 116, 1000, 112, 552],
-[512, 148, 336, 572, 832, 1000]]
-
-print(list_angles)
+angles = [452, 280, 188, 652]
+depth = int(len(angles)/2)
+num_repetitions = 50
+seed_list = np.arange(num_repetitions)
 df_results = []
 
 def define_angles_boundaries( depth):
@@ -60,8 +56,8 @@ def define_angles_boundaries( depth):
         
     return np.array(angle_bounds)
         
-         
-for angles in list_angles:
+for i, seed in enumerate(seed_list):
+
     depth = int(len(angles)/2)
     angles_bounds = define_angles_boundaries(depth)
     qaoa = qaoa_pulser(depth = depth, 
@@ -71,9 +67,10 @@ for angles in list_angles:
                         seed = seed, 
                         quantum_noise = quantum_noise)
     res =  qaoa.apply_qaoa(angles)
+
     df_results.append(res)
     
 all_angles = pd.DataFrame.from_dict(df_results)
 print(all_angles.columns)
 print(all_angles)
-all_angles.to_csv('results/sequences_3_trial')
+all_angles.to_pickle(f'output/sequence_{angles}_runs_{num_repetitions}_results')
