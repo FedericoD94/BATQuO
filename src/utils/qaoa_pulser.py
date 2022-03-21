@@ -26,6 +26,7 @@ class qaoa_pulser(object):
                 
         self.seed = seed
         self.C_6_over_h = Chadoq2.interaction_coeff
+        
         #see notes/info.pdf for this value
         self.omega = Q_DEVICE_PARAMS['omega_over_2pi'] * 2 * np.pi 
         self.omega_off = Q_DEVICE_PARAMS['omega_off_over_2pi'] * 2 * np.pi
@@ -35,7 +36,8 @@ class qaoa_pulser(object):
                                             )
         self.rydberg_radius = Chadoq2.rydberg_blockade_radius(self.omega)
         self.lattice_spacing = lattice_spacing
-        self.U = [] # it is a list because two qubits in rydberg interactiong might be closer than others
+        self.U = [] # it is a list because two qubits in rydberg 
+                    # interaction might be closer than others
         self.angles_bounds = angles_bounds
         self.depth = depth
         self.G, self.qubits_dict = self.generate_graph(type_of_graph)
@@ -47,26 +49,9 @@ class qaoa_pulser(object):
         self.reg = Register(self.qubits_dict)
         self.quantum_noise = quantum_noise
         if quantum_noise is not None:
-            if quantum_noise == 'all':
-                noise = ('SPAM', 'dephasing', 'doppler', 'amplitude')
-                
-                self.noise_config = SimConfig(noise=noise,
-                                          eta = Q_DEVICE_PARAMS['eta'],
-                                          epsilon = Q_DEVICE_PARAMS['epsilon'],
-                                          epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
-                                          temperature = Q_DEVICE_PARAMS['temperature'],
-                                          laser_waist = Q_DEVICE_PARAMS['laser_waist'],
-                                          )
-            else:
-                self.noise_config = SimConfig(noise=(self.quantum_noise),
-                                              eta = Q_DEVICE_PARAMS['eta'],
-                                              epsilon = Q_DEVICE_PARAMS['epsilon'],
-                                              epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
-                                              temperature = Q_DEVICE_PARAMS['temperature'],
-                                              laser_waist = Q_DEVICE_PARAMS['laser_waist'],
-                                              )
-            self.noise_info = self.noise_config.__str__()
+            self.set_quantum_noise(quantum_noise)
         
+            
         
     def print_info_problem(self,f):
         f.write('Problem: MIS\n')
@@ -87,7 +72,33 @@ class qaoa_pulser(object):
         f.write(f'Classical sol: {self.solution}\n')
         if self.quantum_noise is not None:
             f.write(f'Noise info: {self.noise_info}')
+        else:
+            f.write(f'Noise: NO')
         f.write('\n')
+        
+    def set_quantum_noise(self, quantum_noise):
+    
+        if quantum_noise == 'all':
+                noise = ('SPAM', 'dephasing', 'doppler', 'amplitude')
+            
+                self.noise_config = SimConfig(
+                                        noise=noise,
+                                        eta = Q_DEVICE_PARAMS['eta'],
+                                        epsilon = Q_DEVICE_PARAMS['epsilon'],
+                                        epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
+                                        temperature = Q_DEVICE_PARAMS['temperature'],
+                                        laser_waist = Q_DEVICE_PARAMS['laser_waist'],
+                                        )
+        else:
+            self.noise_config = SimConfig(
+                                    noise=(self.quantum_noise),
+                                    eta = Q_DEVICE_PARAMS['eta'],
+                                    epsilon = Q_DEVICE_PARAMS['epsilon'],
+                                    epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
+                                    temperature = Q_DEVICE_PARAMS['temperature'],
+                                    laser_waist = Q_DEVICE_PARAMS['laser_waist'],
+                                    )
+        self.noise_info = self.noise_config.__str__()
         
     def Omega_from_b(self, omega, delta_i, omega_r):
         
@@ -116,13 +127,20 @@ class qaoa_pulser(object):
         '''
         if type_of_graph == 'chair':
             a = self.lattice_spacing
-            pos =[[0, 0], 
+            pos =[
+                  [0, 0], 
                   [a, 0], 
                   [3/2 * a, np.sqrt(3)/2 * a], 
                   [3/2 * a, -np.sqrt(3)/2 * a], 
                   [2 * a, 0], 
                   [3 * a, 0]
                   ]
+        # if type_of_graph == 'butterfly':
+#             a = self.lattice_spacing
+#             pos = [
+#                    [0,0],
+#                     
+#             ]
         else:
             print('type of graph not supported')
             
