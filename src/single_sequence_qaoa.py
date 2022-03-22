@@ -41,7 +41,7 @@ random.seed(seed)
 angles = [452, 280, 188, 652]
 depth = int(len(angles)/2)
 num_repetitions = 50
-seed_list = np.arange(num_repetitions)
+seed_list = np.arange(num_repetitions, num_repetitions*2)
 df_results = []
 
 def define_angles_boundaries( depth):
