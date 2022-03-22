@@ -36,7 +36,7 @@ class Bayesian_optimization():
                                 lattice_spacing,
                                 seed,
                                 quantum_noise)
-        self.qaoa.apply_qaoa([238,458,596,800], show = True)
+        print('creata istanza qaoa')
         exit()
         self.type_of_graph = type_of_graph
 
