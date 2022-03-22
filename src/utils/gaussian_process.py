@@ -310,7 +310,6 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
             plt.show()
             
     def get_log_marginal_likelihood(self, show = False, save = True, folder_path = ''):
-        fig = plt.figure()
         num = 50
         
         min_x = np.log(DEFAULT_PARAMS['length_scale_bounds'][0])
@@ -325,7 +324,8 @@ class MyGaussianProcessRegressor(GaussianProcessRegressor):
         for i, ascissa in enumerate(ascisse):
             for j, ordinata in enumerate(ordinate):
                 likelihood[j, i] = self.log_marginal_likelihood([ascissa, ordinata])
-        if show or save:             
+        if (show or save):             
+            fig = plt.figure()
             im = plt.imshow(likelihood, extent = [min_x, max_x, min_y, max_y], origin = 'lower', aspect = 'auto')
         
             tot_paths = 1 + DEFAULT_PARAMS['n_restart_kernel_optimizer']

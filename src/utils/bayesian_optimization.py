@@ -36,8 +36,6 @@ class Bayesian_optimization():
                                 lattice_spacing,
                                 seed,
                                 quantum_noise)
-        print('creata istanza qaoa')
-        exit()
         self.type_of_graph = type_of_graph
 
         ### CREATE GP 
