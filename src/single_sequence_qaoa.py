@@ -41,7 +41,7 @@ random.seed(seed)
 angles = [452, 280, 188, 652]
 depth = int(len(angles)/2)
 num_repetitions = 50
-seed_list = np.arange(num_repetitions, num_repetitions*2)
+seed_list = np.random.randint(0,1000000,50)
 df_results = []
 
 def define_angles_boundaries( depth):
@@ -73,4 +73,4 @@ for i, seed in enumerate(seed_list):
 all_angles = pd.DataFrame.from_dict(df_results)
 print(all_angles.columns)
 print(all_angles)
-all_angles.to_pickle(f'output/sequence_{angles}_runs_{num_repetitions}_results')
+all_angles.to_pickle(f'output/sequence_452_280_188_652_runs_{num_repetitions}_results')
