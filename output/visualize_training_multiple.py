@@ -1,106 +1,88 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import pickle
-
-depths = [2,3,4]
-Nwarmup = 10
-Nbayes = 100
-Ntot = Nwarmup + Nbayes
-
-fidelities = np.zeros((len(depths), Ntot))
-energies = np.zeros((len(depths), Ntot))
-corr_lengths = np.zeros((len(depths), Ntot))
-average_distance_vector = np.zeros((len(depths), Ntot))
-std_energies = np.zeros((len(depths), Ntot))
-energies_best = np.zeros((len(depths), Ntot))
-fidelities_best = np.zeros((len(depths), Ntot))
-iterations = np.zeros((len(depths), Ntot))
-variances = np.zeros((len(depths), Ntot))
+from matplotlib.lines import Line2D
 
 
-energies_best[0] = 0
-fidelities_best[0] = 0
+'''
+Plots the data during training for different values of the depth p. The data that are
 
-for i, depth in enumerate(depths):
-    energy_pos = 1 + 2*depth
-    fidelity_pos = energy_pos +1
-    variance_pos = fidelity_pos +1
-    corr_length_pos = variance_pos +1
-    std_energies_pos = corr_length_pos +2
-    avg_dist_vect_pos = std_energies_pos +1
-    n_it_pos = avg_dist_vect_pos + 1
-    
-    folder_name = f'p_{depth}/'
-    A = np.loadtxt(folder_name + f'lfgbs_p_{depth}_punti_{Ntot}_warmup_{Nwarmup}_train_{Nbayes}_trial_1_graph_12.dat')
-    energies_best[i, 0] = A[0, energy_pos]
-    fidelities_best[i, 0] = A[0, fidelity_pos]
-    for k, a in enumerate(A[1:Ntot, energy_pos]):
-    	if a < energies_best[i, k]:
-    		energies_best[i, k+1] = a
-    	else:
-    		energies_best[i, k+1] = energies_best[i, k]
-    
-    for k, a in enumerate(A[1:Ntot, fidelity_pos]):
-    	if a > fidelities_best[i, k]:
-    		fidelities_best[i, k+1] = a
-    	else:
-    		fidelities_best[i, k+1] = fidelities_best[i, k]
-    
-    energies[i] = A[:Ntot, energy_pos]
-    fidelities[i] =  A[:Ntot, fidelity_pos]
-    variances[i] = A[:Ntot, variance_pos]
-    corr_lengths[i] = A[:Ntot, corr_length_pos]
-    std_energies[i] = A[:Ntot, std_energies_pos]
-    average_distance_vector[i] = A[:Ntot, avg_dist_vect_pos]
-    iterations[i] = A[:Ntot, n_it_pos]
+what_to_plot: the name of the type of data you want to visualize to be chosen in the
+                list of what_can_be_plot
+depths: which data to plot, list of integers
+Nwarmup, Nbayes, trial, graph : has to be copied as they appear on the data
+
+'''
+
+depths = [1,2, 3]
+nwarmup = 10
+nbayes = 300
+seeds = [3,4]
+
+
+what_can_be_plot = ['energy',
+                    'best_energy',
+                     'approx_ratio',
+                     'best_approx_ratio',
+                     'fidelity',
+                     'best_fidelity',
+                     'variance',
+                     'corr_length',
+                     'const_kernel',
+                     'std_energies',
+                     'average_distances',
+                     'nit',
+                     'time_opt_bayes',
+                     'time_qaoa',
+                     'time_opt_kernel',
+                     'time_step'
+                     ]
+what_to_plot = ['approx_ratio', 
+                'best_approx_ratio',
+                'fidelity', 
+                'best_fidelity',
+                'corr_length',
+                'const_kernel',
+                'variance',
+                'nit'
+                ]
+                
+#assuming 8 plots to produce can be 
+#adapted to length of what_to_plot
 
 lines = ['.-', 'P-', 's-', '^-', 'D-']
 markersize = 2
 linewidth = 0.8
-x = np.arange(0, len(fidelities[0]))
-fig, axis = plt.subplots(2,4, figsize = (12, 7))
-for i in range(len(depths)):
-    axis[0, 0].plot(x, fidelities[i],lines[i],  label = str(depths[i]),markersize = markersize,  linewidth = linewidth)
-    axis[0, 0].set_ylabel('Fidelity')
-    axis[0, 0].set_xlabel('Steps')
-    
-    axis[0, 1].plot(x, energies[i], lines[i], label = str(depths[i]), markersize = markersize,  linewidth = linewidth)
-    axis[0, 1].set_ylabel('Energy')
-    axis[0, 1].set_xlabel('Steps')
-    
-    axis[0, 2].plot(x, corr_lengths[i], lines[i], label = str(depths[i]), markersize = markersize,  linewidth = linewidth)
-    axis[0, 2].set_ylabel('Corr lengths')
-    axis[0, 2].set_xlabel('Steps')
-    
-    axis[0, 3].plot(x, np.log(average_distance_vector[i]), lines[i], label = str(depths[i]), markersize = markersize,  linewidth = linewidth)
-    axis[0, 3].set_ylabel('avg distance vector')
-    axis[0, 3].set_xlabel('Steps')
-    axis[0, 3].axhline(y = np.log(0.01), c = 'k')
-    
+fig, axis = plt.subplots(2,4, figsize = (10, 6)) 
+line_length = int( len(what_to_plot) / 2) 
 
-    axis[1, 0].plot(x, fidelities_best[i], linewidth = 2, label = str(depths[i]))
-    axis[1, 0].set_ylabel('Fidelity best')
-    axis[1, 0].set_xlabel('Steps')
-    
-    axis[1, 1].plot(x, energies_best[i],  linewidth = 2,label = str(depths[i]))
-    axis[1, 1].set_ylabel('Energy best')
-    axis[1, 1].set_xlabel('Steps')
-    
-    axis[1, 2].plot(x, iterations[i], lines[i], label = str(depths[i]), markersize = markersize,  linewidth = linewidth)
-    axis[1, 2].set_ylabel('iterations')
-    axis[1, 2].set_xlabel('Steps')
-    
-    axis[1, 3].plot(x, np.log(variances[i]), lines[i], label = str(depths[i]), markersize = markersize,  linewidth = linewidth)
-    axis[1, 3].set_ylabel('variances')
-    axis[1, 3].set_xlabel('Steps')
-    
+for i, depth in enumerate(depths):
 
-axis[0, 0].legend()
-axis[0, 1].legend()
-axis[1, 0].legend()
-axis[1, 1].legend()
-plt.suptitle('Different P, Ntot = {}, warmup = {}%'.format(Ntot, Nwarmup))
+    name_ = f'p={depth}_warmup={nwarmup}_train={nbayes}_spacing_5_seed_{seed}'
+    
+    a = df.read_pickle(name_ + '/' +name_ + '.dat')
+    print(a.columns)
+    exit()
+    for j, plot_name in enumerate(what_to_plot):
+    
+        current_axis = axis[j // line_length, j % line_length]
+        current_axis.plot(
+                         df[plot_name],
+                         lines[i % len(lines)],
+                         color = f'C{depth}',
+                         label = str(depths[i]),
+                         markersize = markersize,
+                         linewidth = linewidth
+                         )
+        current_axis.set_ylabel(plot_name)
+        current_axis.set_xlabel('Steps')
+        current_axis.legend()
+    
+        
+    
+            
+    
+#plt.suptitle('Different P, Ntot = {}, warmup = {}%'.format(Ntot, Nwarmup))
 plt.tight_layout()
 plt.show()
 

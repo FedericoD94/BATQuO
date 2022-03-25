@@ -400,7 +400,7 @@ class qaoa_pulser(object):
         for key in self.solution.keys():
             val = ''.join(str(key[i]) for i in range(len(key)))
             color_dict[val] = 'r'
-        plt.figure(figsize=(10,6))
+        plt.figure(figsize=(10,8))
         plt.xlabel("bitstrings")
         plt.ylabel("counts")
         plt.bar(C.keys(), C.values(), width=0.5, color = color_dict.values())
