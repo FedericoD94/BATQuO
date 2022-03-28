@@ -141,7 +141,7 @@ class qaoa_pulser(object):
                   [2 * a, 0], 
                   [3 * a, 0]
                   ]
-        if type_of_graph == 'butterfly':
+        elif type_of_graph == 'butterfly':
             a = self.lattice_spacing
             pos_ = [
                    [0, 0],
@@ -396,8 +396,8 @@ class qaoa_pulser(object):
             sim.add_config(self.noise_config)
         
         self.doppler_detune = sim._doppler_detune
-        
-        
+        self.noisy_pulse_parameters = sim.samples
+                    
         results = sim.run()
         
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
@@ -439,7 +439,7 @@ class qaoa_pulser(object):
                 else:
                     params = fixed_params + [gamma, beta]
                 a = self.apply_qaoa(params)
-                Q[j, i] = a['energy_exact']
+                Q[j, i] = a[0]
                 Q_params[j,i] = np.array([gamma, beta])
 
 
@@ -573,6 +573,7 @@ class qaoa_pulser(object):
 
         results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
         results_dict['doppler_detune'] = self.doppler_detune
+        results_dict['actual_pulse_parameters'] = self.noisy_pulse_parameters
         
         if show:
             self.plot_final_state_distribution(sampled_state)

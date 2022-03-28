@@ -120,7 +120,8 @@ class Bayesian_optimization():
                           'time_qaoa', 
                           'time_opt_kernel', 
                           'time_step',
-                          'doppler_detune'
+                          'doppler_detune',
+                          'actual_pulse_parameters'
                           ]
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
         
@@ -183,7 +184,8 @@ class Bayesian_optimization():
                                 kernel_params[0], 
                                 kernel_params[1], 
                                 0, 0, 0, 0, 0, 0, 0,
-                                data_train[i]['doppler_detune'])
+                                data_train[i]['doppler_detune'],
+                                data_train[i]['actual_pulse_parameters'])
                              )
         self.data_file_name = self.file_name + '.dat'
         df = pd.DataFrame(data = self.data_, columns = self.data_names)
@@ -334,7 +336,8 @@ class Bayesian_optimization():
                          qaoa_time, 
                          kernel_time, 
                          step_time,
-                         qaoa_results['doppler_detune']
+                         qaoa_results['doppler_detune'],
+                         qaoa_results['actual_pulse_parameters']
                          )
                         )
             
