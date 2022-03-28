@@ -439,7 +439,7 @@ class qaoa_pulser(object):
                 else:
                     params = fixed_params + [gamma, beta]
                 a = self.apply_qaoa(params)
-                Q[j, i] = a[0]
+                Q[j, i] = a['energy_exact']
                 Q_params[j,i] = np.array([gamma, beta])
 
 
