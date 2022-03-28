@@ -21,12 +21,12 @@ DEFAULT_PARAMS = {"penalty": 5,
                   }
                   
 Q_DEVICE_PARAMS = {'type_of_lattice': 'triangular',
-                   'eta': 0.005,
                    'thermal_motion': 85, #nm
                    'doppler_shift': 0.47, #MHz
                    'intensity_fluctuation':0.03, 
                    'laser_waist': 148, #micrometers
                    'rising_time': 50, #ns
+                   'eta': 0.005, #state prep error for every qubit
                    'epsilon': 0.03, #false positive
                    'epsilon_prime': 0.08, #false negative
                    'temperature': 30, #microKelvin

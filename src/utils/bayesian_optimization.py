@@ -94,34 +94,38 @@ class Bayesian_optimization():
         os.makedirs(self.folder_name, exist_ok = True)
         angle_names = self.angle_names_string()
         
-        self.data_names = ['iter'] + angle_names \
-                                   + ['energy_sampled',
-                                      'classical_solution',
-                                      'ratio_sampled_classical', 
-                                      'energy_exact',
-                                      'energy_gs',
-                                      'ratio_exact_gs',
-                                      'energy_best',
-                                      'variance_sampled', 
-                                      'variance_exact',
-                                      'fidelity_exact', 
-                                      'fidelity_sampled',
-                                      'fidelity_best', 
-                                      'ratio_solution',
-                                      'ratio_solution_best', 
-                                      'corr_length', 
-                                      'const_kernel',
-                                      'std_energies', 
-                                      'average_distances', 
-                                      'n_iterations', 
-                                      'time_opt_bayes', 
-                                      'time_qaoa', 
-                                      'time_opt_kernel', 
-                                      'time_step']
+        self.data_names = [
+                          'iter',
+                          'point',
+                          'energy_sampled',
+                          'classical_solution',
+                          'ratio_sampled_classical', 
+                          'energy_exact',
+                          'energy_gs',
+                          'ratio_exact_gs',
+                          'energy_best',
+                          'variance_sampled', 
+                          'variance_exact',
+                          'fidelity_exact', 
+                          'fidelity_sampled',
+                          'fidelity_best', 
+                          'ratio_solution',
+                          'ratio_solution_best', 
+                          'corr_length', 
+                          'const_kernel',
+                          'std_energies', 
+                          'average_distances', 
+                          'n_iterations', 
+                          'time_opt_bayes', 
+                          'time_qaoa', 
+                          'time_opt_kernel', 
+                          'time_step',
+                          'doppler_detune'
+                          ]
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
         
-        info_file_name = self.folder_name + self.file_name + '_info.txt'
-        with open(info_file_name, 'w') as f:
+        self.info_file_name = self.folder_name + self.file_name + '_info.txt'
+        with open(self.info_file_name, 'w') as f:
             f.write('BAYESIAN OPTIMIZATION of QAOA \n\n')
             self.qaoa.print_info_problem(f)
             
@@ -159,9 +163,10 @@ class Bayesian_optimization():
         solution_ratio_best = np.max([data_train[i]['solution_ratio'] for i in range(len(X_train))])
         gs_en = self.qaoa.gs_en
         for i, x in enumerate(X_train):
-            self.data_.append([i +1] 
-                               + x  
-                               +[y_train[i], 
+            self.data_.append(
+                              (i +1,
+                               x , 
+                               y_train[i], 
                                 self.qaoa.solution_energy, 
                                 1 - y_train[i]/ self.qaoa.solution_energy,
                                 data_train[i]['energy_exact'],
@@ -174,12 +179,17 @@ class Bayesian_optimization():
                                 data_train[i]['fidelity_exact'], 
                                 fidelity_best,
                                 data_train[i]['solution_ratio'],
-                                solution_ratio_best]
-                               +[kernel_params[0], 
-                                 kernel_params[1], 
-                                 0, 0, 0, 0, 0, 0, 0])
-            
+                                solution_ratio_best,
+                                kernel_params[0], 
+                                kernel_params[1], 
+                                0, 0, 0, 0, 0, 0, 0,
+                                data_train[i]['doppler_detune'])
+                             )
         self.data_file_name = self.file_name + '.dat'
+        df = pd.DataFrame(data = self.data_, columns = self.data_names)
+        df.to_pickle(
+                    self.folder_name + self.file_name, 
+                    )
         
                
     def acq_func(self, x):
@@ -298,32 +308,42 @@ class Bayesian_optimization():
             
             solution = self.qaoa.solution_energy
             gs_en = self.qaoa.gs_en
-            new_data = ([i+self.nwarmup] 
-                           + next_point  
-                           + [y_next_point, 
-                             solution, 
-                             1 - y_next_point/solution, 
-                             qaoa_results['energy_exact'],
-                             gs_en,
-                             1 - qaoa_results['energy_exact']/gs_en,
-                             energy_best,
-                             qaoa_results['variance_sampled'], 
-                             qaoa_results['variance_exact'],
-                             qaoa_results['fidelity_sampled'],
-                             qaoa_results['fidelity_exact'], 
-                             fidelity_best,
-                             qaoa_results['solution_ratio'], 
-                             solution_ratio_best,
-                             corr_length, 
-                             constant_kernel, 
-                             std_pop_energy, 
-                             avg_sqr_distances, 
-                             n_it, 
-                             bayes_time, 
-                             qaoa_time, 
-                             kernel_time, 
-                             step_time]  )
-
+            new_data = (
+                        (i+self.nwarmup +1,
+                         next_point,  
+                         y_next_point, 
+                         solution, 
+                         1 - y_next_point/solution, 
+                         qaoa_results['energy_exact'],
+                         gs_en,
+                         1 - qaoa_results['energy_exact']/gs_en,
+                         energy_best,
+                         qaoa_results['variance_sampled'], 
+                         qaoa_results['variance_exact'],
+                         qaoa_results['fidelity_sampled'],
+                         qaoa_results['fidelity_exact'], 
+                         fidelity_best,
+                         qaoa_results['solution_ratio'], 
+                         solution_ratio_best,
+                         corr_length, 
+                         constant_kernel, 
+                         std_pop_energy, 
+                         avg_sqr_distances, 
+                         n_it, 
+                         bayes_time, 
+                         qaoa_time, 
+                         kernel_time, 
+                         step_time,
+                         qaoa_results['doppler_detune']
+                         )
+                        )
+            
+            with open(self.info_file_name, 'a') as f:
+                f.write(f'iteration: {i +1}/{self.nbayes}  {next_point}'
+                        f' (E - E_0)/E_0: {1 - y_next_point/self.qaoa.solution_energy}'
+                        f' en: {y_next_point}'
+                         ' fid: {}\n'.format(qaoa_results['fidelity_sampled']))
+                        
             print(f'iteration: {i +1}/{self.nbayes}  {next_point}'
                     f' (E - E_0)/E_0: {1 - y_next_point/self.qaoa.solution_energy}'
                     ' en: {}, fid: {}'.format(y_next_point, qaoa_results['fidelity_sampled'])
@@ -331,13 +351,12 @@ class Bayesian_optimization():
                     
             self.data_.append(new_data)
             df = pd.DataFrame(data = self.data_, columns = self.data_names)
-            df.to_csv(self.folder_name + self.data_file_name, 
-                      columns = self.data_names, 
-                      header = self.data_header)
+            df.to_pickle(
+                        self.folder_name + self.file_name,
+                        )
             
         best_x, best_y, where = self.gp.get_best_point()
         self.data_.append(self.data_[where])
         df = pd.DataFrame(data = self.data_, columns = self.data_names)
-        df.to_csv(self.folder_name + self.data_file_name, columns = self.data_names, header = self.data_header)
-        #np.savetxt(self.folder_name + self.data_file_name, self.data_, fmt =  self.fmt_string, header = self.data_header)
+        df.to_pickle(self.folder_name + self.file_name)
         print('Best point: ' , self.data_[where])

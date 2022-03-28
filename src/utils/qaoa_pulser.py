@@ -88,6 +88,8 @@ class qaoa_pulser(object):
                                         epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
                                         temperature = Q_DEVICE_PARAMS['temperature'],
                                         laser_waist = Q_DEVICE_PARAMS['laser_waist'],
+                                        runs = 1,
+                                        samples_per_run = 1
                                         )
         else:
             self.noise_config = SimConfig(
@@ -97,8 +99,12 @@ class qaoa_pulser(object):
                                     epsilon_prime = Q_DEVICE_PARAMS['epsilon_prime'],
                                     temperature = Q_DEVICE_PARAMS['temperature'],
                                     laser_waist = Q_DEVICE_PARAMS['laser_waist'],
+                                    runs = 1,
+                                    samples_per_run = 1
                                     )
+        
         self.noise_info = self.noise_config.__str__()
+        
         
     def Omega_from_b(self, omega, delta_i, omega_r):
         
@@ -334,6 +340,7 @@ class qaoa_pulser(object):
     def create_quantum_circuit(self, params):
         seq = Sequence(self.reg, Chadoq2)
         seq.declare_channel('ch0','rydberg_global')
+        
         gammas = params[::2]
         betas = params[1::2]
         
@@ -355,7 +362,7 @@ class qaoa_pulser(object):
         while sampling_rate * sum(params) < 4:
             sampling_rate += 0.1
         simul = Simulation(seq, sampling_rate=sampling_rate)
-    
+        
         return simul
         
     def draw_pulses_sequence(self, params = None, save_dir = None):
@@ -388,8 +395,11 @@ class qaoa_pulser(object):
         if self.quantum_noise is not None:
             sim.add_config(self.noise_config)
         
+        self.doppler_detune = sim._doppler_detune
+        
+        
         results = sim.run()
-
+        
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
         
         return count_dict, results.states
@@ -562,7 +572,7 @@ class qaoa_pulser(object):
         results_dict['solution_ratio'] = self.solution_ratio(sampled_state)
 
         results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
-
+        results_dict['doppler_detune'] = self.doppler_detune
         
         if show:
             self.plot_final_state_distribution(sampled_state)
