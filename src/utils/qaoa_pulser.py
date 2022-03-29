@@ -102,6 +102,7 @@ class qaoa_pulser(object):
                                     runs = 1,
                                     samples_per_run = 1
                                     )
+        self.noise_config._change_attribute(attr_name = 'runs', new_value= 1)
         
         self.noise_info = self.noise_config.__str__()
         
@@ -117,7 +118,6 @@ class qaoa_pulser(object):
         l_shift = (Omega_r**2 
                    - self.Omega_from_b(omega, delta_i, Omega_r)**2)/(4*delta_i)
                      
-        
         return l_shift
         
     def delta_from_omega(self, omega_on, omega_off):
@@ -360,8 +360,10 @@ class qaoa_pulser(object):
         #check if sampling_rate is too small by doing rate*total_duration:
         sampling_rate = 1
         while sampling_rate * sum(params) < 4:
-            sampling_rate += 0.1
-        simul = Simulation(seq, sampling_rate=sampling_rate)
+            sampling_rate += 0.05
+        simul = Simulation(seq, 
+                            sampling_rate=sampling_rate,
+                            evaluation_times = 'Full')
         
         return simul
         
@@ -392,13 +394,23 @@ class qaoa_pulser(object):
     
     def quantum_loop(self, param):
         sim = self.create_quantum_circuit(param)
+        
         if self.quantum_noise is not None:
             sim.add_config(self.noise_config)
         
         self.doppler_detune = sim._doppler_detune
         self.noisy_pulse_parameters = sim.samples
                     
-        results = sim.run()
+        if self.quantum_noise is not None:
+            prog_bar = True
+        else:
+            prog_bar = False
+            
+        sim.config._change_attribute('runs', 1)
+        sim.config._change_attribute('samples_per_run', 1)
+        results = sim.run( 
+                        progress_bar = prog_bar
+                        )
         
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
         
@@ -558,7 +570,10 @@ class qaoa_pulser(object):
         results_dict = {}
         sampled_state, evolution_states= self.quantum_loop(params)
         results_dict['sampled_state'] = sampled_state
-        results_dict['evolution_states'] = evolution_states
+        if self.quantum_noise is not None:
+            results_dict['final_state'] = np.diag(evolution_states[-1])
+        else:
+            results_dict['final_state'] = evolution_states[-1]
         
         sampled_energy, sampled_variance = self.calculate_sampled_energy_and_variance(sampled_state)
         results_dict['energy_sampled'] = sampled_energy

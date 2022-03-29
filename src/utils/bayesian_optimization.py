@@ -121,7 +121,8 @@ class Bayesian_optimization():
                           'time_opt_kernel', 
                           'time_step',
                           'doppler_detune',
-                          'actual_pulse_parameters'
+                          'actual_pulse_parameters',
+                          'final_state'
                           ]
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
         
@@ -185,7 +186,9 @@ class Bayesian_optimization():
                                 kernel_params[1], 
                                 0, 0, 0, 0, 0, 0, 0,
                                 data_train[i]['doppler_detune'],
-                                data_train[i]['actual_pulse_parameters'])
+                                data_train[i]['actual_pulse_parameters'],
+                                data_train[i]['final_state']
+                                )
                              )
         self.data_file_name = self.file_name + '.dat'
         df = pd.DataFrame(data = self.data_, columns = self.data_names)
@@ -291,15 +294,12 @@ class Bayesian_optimization():
             optimization_samples = self.gp.kernel_opt_samples
             self.likelihood_landscapes.append(likelihood_landscape)
             self.kernel_matrices.append(cov_matrix.tolist())
-            self.final_states.append(qaoa_results['evolution_states'][-1])
             
             
             np.save(self.folder_name + 'likelihoods', 
                         self.likelihood_landscapes)  #saved in binary bc its is 3d
             np.save(self.folder_name + 'cov_matrices', 
                          np.array(self.kernel_matrices)) 
-            np.save(self.folder_name + 'final_states', 
-                         np.array(self.final_states)) 
             np.save(self.folder_name + 'optimization_kernel', 
                          optimization_samples) 
             constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
@@ -337,7 +337,8 @@ class Bayesian_optimization():
                          kernel_time, 
                          step_time,
                          qaoa_results['doppler_detune'],
-                         qaoa_results['actual_pulse_parameters']
+                         qaoa_results['actual_pulse_parameters'],
+                         qaoa_results['final_state']
                          )
                         )
             
