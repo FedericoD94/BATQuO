@@ -38,7 +38,7 @@ np.random.seed(seed)
 random.seed(seed)
 
 ####### CREATE BAYES OPT INSTANCE ########
-angles = [416,312,360,692]
+angles = [100,100,800,504,108,201]
 depth = int(len(angles)/2)
 num_repetitions = 1
 df_results = []
@@ -55,19 +55,17 @@ def define_angles_boundaries( depth):
         
     return np.array(angle_bounds)
         
-for quantum_noise in (None, 'SPAM', 'amplitude', 'dephasing', 'doppler'):
-    angles_bounds = define_angles_boundaries(depth)
-    qaoa = qaoa_pulser(depth = depth, 
-                       angles_bounds = angles_bounds,
-                        type_of_graph = type_of_graph, 
-                        lattice_spacing = lattice_spacing, 
-                        seed = seed, 
-                        quantum_noise = quantum_noise)
-    res =  qaoa.apply_qaoa(angles)
+quantum_noise = 'all'
+angles_bounds = define_angles_boundaries(depth)
+qaoa = qaoa_pulser(depth = depth, 
+                   angles_bounds = angles_bounds,
+                    type_of_graph = type_of_graph, 
+                    lattice_spacing = lattice_spacing, 
+                    seed = seed, 
+                    quantum_noise = quantum_noise)
+res =  qaoa.apply_qaoa(angles)
 
-    df_results.append(res)
+df_results.append(res)
     
 all_angles = pd.DataFrame.from_dict(df_results)
-print(all_angles.columns)
-print(all_angles)
-all_angles.to_pickle(f'output/sequence_416_312_360_692_different_noises_results')
+all_angles.to_pickle(f'output/sequence_100_100_800_504_108_200_noise_result_seed_{seed}')
