@@ -131,8 +131,8 @@ class qaoa_pulser(object):
         Parameters: positions of qubits in micrometers
         Returns: networkx graph G
         '''
+        a = self.lattice_spacing
         if type_of_graph == 'chair':
-            a = self.lattice_spacing
             pos_ =[
                   [0, 0], 
                   [a, 0], 
@@ -142,7 +142,6 @@ class qaoa_pulser(object):
                   [3 * a, 0]
                   ]
         elif type_of_graph == 'butterfly':
-            a = self.lattice_spacing
             pos_ = [
                    [0, 0],
                    [0, a],
@@ -156,6 +155,22 @@ class qaoa_pulser(object):
                    [np.sqrt(3) * 2 * a, a],
                    [np.sqrt(3) * 2 * a, a * 2]
             ]
+        elif type_of_graph == 'grid':
+            pos_ = [ 
+                    [0, 0],
+                    [a, 0],
+                    [a * 2, 0],
+                    [a * 3, 0],
+                    [a / 2, np.sqrt(3) * 1/2 * a],
+                    [3/2 * a, np.sqrt(3) * 1/2 * a],
+                    [5/2 * a, np.sqrt(3) * 1/2 * a],
+                    [7/2 * a, np.sqrt(3) * 1/2 * a],
+                    [a, np.sqrt(3) * a],
+                    [2 * a, np.sqrt(3) * a],
+                    [3 * a, np.sqrt(3) * a],
+                    [4 * a, np.sqrt(3) * a]
+                    ]
+            
         else:
             print('type of graph not supported')
             
@@ -492,7 +507,11 @@ class qaoa_pulser(object):
         final_state_dims = final_state.dims
         flipped = np.flip(final_state.full())
         flipped = Qobj(flipped, dims = final_state.dims)
-        overlap = self.gs_state.overlap(flipped)
+        if self.deg:
+            overlaps_ = [self.gs_state[i].overlap(flipped) for i in self.deg]
+            overlap = sum(overlaps_)/self.deg
+        else:
+            overlap = self.gs_state.overlap(flipped)
         fidelity =  np.abs(overlap)**2
 
         return fidelity
