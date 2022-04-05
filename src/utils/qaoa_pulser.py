@@ -438,7 +438,6 @@ class qaoa_pulser(object):
         sim.config._change_attribute('runs', 1)
         sim.config._change_attribute('samples_per_run', 1)
         print(sim._eval_times_array)
-        exit()
         results = sim.run( 
                         progress_bar = prog_bar
                         )
