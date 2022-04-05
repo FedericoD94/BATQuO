@@ -296,12 +296,12 @@ class Bayesian_optimization():
             self.kernel_matrices.append(cov_matrix.tolist())
             
             
-            np.save(self.folder_name + 'likelihoods', 
-                        self.likelihood_landscapes)  #saved in binary bc its is 3d
-            np.save(self.folder_name + 'cov_matrices', 
-                         np.array(self.kernel_matrices)) 
-            np.save(self.folder_name + 'optimization_kernel', 
-                         optimization_samples) 
+            # np.save(self.folder_name + 'likelihoods', 
+#                         self.likelihood_landscapes)  #saved in binary bc its is 3d
+#             np.save(self.folder_name + 'cov_matrices', 
+#                          np.array(self.kernel_matrices)) 
+#             np.save(self.folder_name + 'optimization_kernel', 
+#                          optimization_samples) 
             constant_kernel, corr_length = np.exp(self.gp.kernel_.theta)
             
             

@@ -44,7 +44,6 @@ class qaoa_pulser(object):
         self.solution, self.solution_energy = self.classical_solution()
         self.Nqubit = len(self.G)
         self.gs_en, self.gs_state, self.deg, self.H = self.calculate_physical_gs()
-                
 
         self.reg = Register(self.qubits_dict)
         self.quantum_noise = quantum_noise
@@ -169,6 +168,21 @@ class qaoa_pulser(object):
                     [2 * a, np.sqrt(3) * a],
                     [3 * a, np.sqrt(3) * a],
                     [4 * a, np.sqrt(3) * a]
+                    ]
+        elif type_of_graph == 'twelve':
+            pos_ = [
+                    [a/2, 0],
+                    [-1*a/2, 0],
+                    [-1*3/2*a,0],
+                    [a, np.sqrt(3)/2*a],
+                    [2*a, np.sqrt(3)/2*a],
+                    [-1*a, np.sqrt(3)/2*a],
+                    [-2*a, np.sqrt(3)/2*a],
+                    [a/2, np.sqrt(3)*a],
+                    [-5/2 * a, np.sqrt(3)*a],
+                    [-a, (-1)*np.sqrt(3)/2*a],
+                    [a,(-1)*np.sqrt(3)/2*a],
+                    [3/2*a, (-1)*np.sqrt(3)*a]
                     ]
             
         else:
@@ -378,7 +392,7 @@ class qaoa_pulser(object):
             sampling_rate += 0.05
         simul = Simulation(seq, 
                             sampling_rate=sampling_rate,
-                            evaluation_times = 'Full')
+                            evaluation_times = 0.1)
         
         return simul
         
@@ -423,6 +437,8 @@ class qaoa_pulser(object):
             
         sim.config._change_attribute('runs', 1)
         sim.config._change_attribute('samples_per_run', 1)
+        print(sim._eval_times_array)
+        exit()
         results = sim.run( 
                         progress_bar = prog_bar
                         )
@@ -508,7 +524,7 @@ class qaoa_pulser(object):
         flipped = np.flip(final_state.full())
         flipped = Qobj(flipped, dims = final_state.dims)
         if self.deg:
-            overlaps_ = [self.gs_state[i].overlap(flipped) for i in self.deg]
+            overlaps_ = [self.gs_state[i].overlap(flipped) for i in range(self.deg)]
             overlap = sum(overlaps_)/self.deg
         else:
             overlap = self.gs_state.overlap(flipped)
