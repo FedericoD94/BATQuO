@@ -73,7 +73,7 @@ def parse_command_line():
     parser.add_argument('--type_of_graph',
                         type=str,
                         default='chair',
-                        help="types of graph: chair or random"
+                        help="types of graph: chair, butterfly, nine_qubit, grid, twelve"
                         )
                         
     parser.add_argument('--verbose',

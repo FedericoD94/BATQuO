@@ -154,6 +154,19 @@ class qaoa_pulser(object):
                    [np.sqrt(3) * 2 * a, a],
                    [np.sqrt(3) * 2 * a, a * 2]
             ]
+        elif type_of_graph == 'nine_qubits':
+             pos_ = [
+                   [0, 0],
+                   [0, a * 2],
+                   [np.sqrt(3) * 1/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 1/2 * a, 3/2 * a],
+                   [np.sqrt(3) * a, a],
+                   [np.sqrt(3) * 3/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 3/2 * a, 3/2 * a],
+                   [np.sqrt(3) * 2 * a, 0],
+                   [np.sqrt(3) * 2 * a, a * 2]
+            ]
+            
         elif type_of_graph == 'grid':
             pos_ = [ 
                     [0, 0],
@@ -186,7 +199,8 @@ class qaoa_pulser(object):
                     ]
             
         else:
-            print('type of graph not supported')
+            print('type of graph not supported. Supported names are'
+                    'chair, butterfly, nine_qubit, grid, twelve')
             
         G = nx.Graph()
         edges=[]
@@ -436,13 +450,14 @@ class qaoa_pulser(object):
             prog_bar = False
             
         sim.config._change_attribute('runs', 1)
-        sim.config._change_attribute('samples_per_run', 1)
-        print(sim._eval_times_array)
+        sim.config._change_attribute('samples_per_run', 10)
+        print(len(sim._eval_times_array))
         results = sim.run( 
                         progress_bar = prog_bar
                         )
         
         count_dict = results.sample_final_state(N_samples=DEFAULT_PARAMS['shots'])
+        self.bad_atoms = sim._bad_atoms
         
         return count_dict, results.states
 
@@ -623,7 +638,7 @@ class qaoa_pulser(object):
         results_dict['fidelity_exact'] = self.fidelity_gs_exact(evolution_states[-1])
         results_dict['doppler_detune'] = self.doppler_detune
         results_dict['actual_pulse_parameters'] = self.noisy_pulse_parameters
-        
+        results_dict['bad_atoms'] = self.bad_atoms
         if show:
             self.plot_final_state_distribution(sampled_state)
             

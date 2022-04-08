@@ -122,6 +122,7 @@ class Bayesian_optimization():
                           'time_step',
                           'doppler_detune',
                           'actual_pulse_parameters',
+                          'bad_atoms',
                           'final_state'
                           ]
         self.data_header = " ".join(["{:>7} ".format(i) for i in self.data_names])
@@ -187,6 +188,7 @@ class Bayesian_optimization():
                                 0, 0, 0, 0, 0, 0, 0,
                                 data_train[i]['doppler_detune'],
                                 data_train[i]['actual_pulse_parameters'],
+                                data_train[i]['bad_atoms'],
                                 data_train[i]['final_state']
                                 )
                              )
@@ -338,6 +340,7 @@ class Bayesian_optimization():
                          step_time,
                          qaoa_results['doppler_detune'],
                          qaoa_results['actual_pulse_parameters'],
+                         qaoa_results['bad_atoms'],
                          qaoa_results['final_state']
                          )
                         )
@@ -352,6 +355,9 @@ class Bayesian_optimization():
                     f' (E - E_0)/E_0: {1 - y_next_point/self.qaoa.solution_energy}'
                     ' en: {}, fid: {}'.format(y_next_point, qaoa_results['fidelity_sampled'])
                     )
+                    
+            print(qaoa_results['bad_atoms'],
+                         qaoa_results['final_state'])
                     
             self.data_.append(new_data)
             df = pd.DataFrame(data = self.data_, columns = self.data_names)
