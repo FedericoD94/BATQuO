@@ -154,6 +154,22 @@ class qaoa_pulser(object):
                    [np.sqrt(3) * 2 * a, a],
                    [np.sqrt(3) * 2 * a, a * 2]
             ]
+        elif type_of_graph == 'thirteen':
+            pos_ = [
+                   [0, 0],
+                   [0, a],
+                   [0, a * 2],
+                   [np.sqrt(3) * 1/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 1/2 * a, 3/2 * a],
+                   [np.sqrt(3) * a, a],
+                   [np.sqrt(3) * a, 2 * a],
+                   [np.sqrt(3) * a, 3 * a],
+                   [np.sqrt(3) * 3/2 * a, 1/2 * a],
+                   [np.sqrt(3) * 3/2 * a, 3/2 * a],
+                   [np.sqrt(3) * 2 * a, 0],
+                   [np.sqrt(3) * 2 * a, a],
+                   [np.sqrt(3) * 2 * a, a * 2]
+            ]
         elif type_of_graph == 'nine_qubits':
              pos_ = [
                    [0, 0],
@@ -451,7 +467,6 @@ class qaoa_pulser(object):
             
         sim.config._change_attribute('runs', 1)
         sim.config._change_attribute('samples_per_run', 10)
-        print(len(sim._eval_times_array))
         results = sim.run( 
                         progress_bar = prog_bar
                         )
